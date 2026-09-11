@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SOAT / SCAT</title>
+<style>
+:root{
+  --ink:#1B2430; --paper:#FFFFFF; --muted:#66707C; --line:#D8DDE3; --rail:#F2F4F6; --hover:#F7F8FA;
+  --mark:#B45309; --mark-bg:#FBF1E6; --na:#8A929C; --na-bg:#F1F2F4; --note:#0F766E; --note-bg:#E8F4F2;
+  --focus:#2563EB; --danger:#B91C1C;
+  --fs:14px; --row:36px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font:var(--fs)/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:1px solid var(--line);border-radius:4px;padding:5px 11px;background:var(--paper)}
+button:hover{background:var(--hover)}
+button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.primary:hover{background:#2c3746}
+button.link{border:none;padding:2px 4px;color:var(--note);background:none}
+button.danger{color:var(--danger)}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+input[type=text],input[type=date],select,textarea{border:1px solid var(--line);border-radius:4px;padding:6px 8px;background:#fff;width:100%}
+textarea{resize:vertical;min-height:64px}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.25}
+h1{font-size:18px}h2{font-size:16px}h3{font-size:14px}
+a{color:var(--note)}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.hidden{display:none!important}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:14px;padding:8px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:5}
+.top .brand{font-weight:700;letter-spacing:.2px}
+.top .crumbs{display:flex;gap:6px;align-items:center;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .crumbs span{opacity:.5}
+.top .crumbs button.link{padding:0;color:var(--ink)}
+.top .crumbs b{overflow:hidden;text-overflow:ellipsis}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{border:none;border-radius:0;padding:4px 10px}
+.seg button.on{background:var(--ink);color:#fff}
+
+main{padding:16px;max-width:1240px;margin:0 auto}
+.stack>*+*{margin-top:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.grid2 .span{grid-column:1/-1}
+label.f{display:block}
+label.f>span{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.empty{padding:28px;border:1px dashed var(--line);border-radius:6px;color:var(--muted);text-align:center}
+
+/* tables */
+table.list{width:100%;border-collapse:collapse}
+table.list th,table.list td{padding:7px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.list th{font-weight:600;font-size:12px;color:var(--muted)}
+table.list tr.click{cursor:pointer}
+table.list tr.click:hover{background:var(--hover)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* analysis layout */
+.an{display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start}
+.rail{position:sticky;top:56px;background:var(--rail);border-radius:6px;padding:6px}
+.rail button.rb{display:flex;width:100%;justify-content:space-between;align-items:center;border:none;background:none;border-radius:4px;padding:8px 10px;text-align:left}
+.rail button.rb:hover{background:#fff}
+.rail button.rb.on{background:#fff;box-shadow:0 0 0 1px var(--line)}
+.rail .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rail .cnt b{color:var(--mark)}
+.rail hr{border:none;border-top:1px solid var(--line);margin:6px 4px}
+.rail .go{margin:6px 4px 2px;width:calc(100% - 8px)}
+.blockhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.keys{font-size:12px;color:var(--muted)}
+
+.items{border-top:1px solid var(--line)}
+.grp{padding:12px 8px 4px;font-weight:600;font-size:13px;color:var(--muted)}
+.item{display:grid;grid-template-columns:44px 1fr 40px;align-items:center;min-height:var(--row);border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.item:hover{background:var(--hover)}
+.item .st{height:var(--row);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--na)}
+.item .tx{padding:6px 6px 6px 0}
+.item .cb{height:var(--row);display:flex;align-items:center;justify-content:center;color:var(--muted);opacity:.45}
+.item:hover .cb{opacity:1}
+.item.s1{background:var(--mark-bg)}
+.item.s1 .st{color:var(--mark)}
+.item.s1 .tx{font-weight:600}
+.item.hc .cb{color:var(--note);opacity:1}
+.cmt{padding:4px 8px 10px 44px;border-bottom:1px solid var(--line);background:var(--note-bg)}
+.cmt textarea{min-height:52px}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend i{font-style:normal}
+
+/* report */
+.rp{max-width:1100px}
+.rp .rhead{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:13px;border:1px solid var(--line);padding:10px 12px;border-radius:6px}
+.rp .rhead dt{color:var(--muted)}
+.rp .rhead dd{margin:0}
+.rp .rhead .wide{grid-column:1/-1;white-space:pre-wrap}
+.rp h2{margin-top:18px;padding-bottom:4px;border-bottom:2px solid var(--ink)}
+table.rt{width:100%;border-collapse:collapse;font-size:13px}
+table.rt td{padding:3px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+table.rt td.g{padding-top:8px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--ink)}
+table.rt td.st{width:26px;text-align:center;font-size:15px}
+table.rt td.c{width:40%;white-space:pre-wrap;color:#333}
+table.rt tr.s1 td.st{color:var(--mark)}
+table.rt tr.s1 td.tx{font-weight:600}
+table.rt tr.s0 td{color:var(--na)}
+table.rt.dense td{padding:1px 5px;line-height:1.3}
+.rp .none{padding:6px;color:var(--muted);font-style:italic}
+.rp .concl{white-space:pre-wrap;border:1px solid var(--line);padding:10px 12px;border-radius:6px}
+.rp .foot{margin-top:18px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between}
+
+/* settings */
+.kwgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start;font-size:13px}
+.tax{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.tax textarea{min-height:260px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre}
+.help{background:var(--rail);padding:10px 12px;border-radius:6px;font-size:13px}
+.help code{background:#fff;padding:0 4px;border-radius:3px}
+
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:4px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+
+@media (max-width:760px){
+  .an{grid-template-columns:1fr}
+  .rail{position:static;display:flex;flex-wrap:wrap;gap:4px}
+  .rail button.rb{width:auto;padding:6px 10px;gap:6px}
+  .rail hr{display:none}
+  .rail .go{width:auto;margin:0}
+  .grid2{grid-template-columns:1fr}
+  .keys{display:none}
+  main{padding:10px}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+@media print{
+  .top,.noprint,.toast{display:none!important}
+  body{font-size:11.5px}
+  main{padding:0;max-width:none}
+  .rp .rhead{border-color:#999}
+  .rp h2{break-after:avoid}
+  .rp .blk{break-inside:avoid}
+  table.rt td{border-bottom-color:#bbb}
+  table.rt td.g{border-bottom-color:#000}
+  .rp .foot{position:fixed;bottom:0;left:0;right:0}
+  .rp.full .blocks{column-count:2;column-gap:10mm;column-fill:balance}
+  .rp.full .blk{break-inside:auto}
+  .rp.full table.rt tr{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="top" id="top"></header>
+<main id="app"></main>
+<div class="toast" id="toast"></div>
+<input type="file" id="importFile" accept="application/json,.json" class="hidden">
+
+<script>
+'use strict';
+const KEY='soat_scat_v1';
+const BLOCKS=['loss','contact','immediate','basic','control'];
+
+/* ---------- i18n ---------- */
+const I18N={
+en:{
+ appName:'SOAT / SCAT', projects:'Projects', newProject:'New project', projectName:'Project name', site:'Site / department',
+ create:'Create', cancel:'Cancel', analyses:'Analyses', newAnalysis:'New analysis', open:'Open', report:'Report',
+ summary:'Project summary', del:'Delete', confirmDel:'Delete permanently? This cannot be undone.', back:'Back',
+ details:'Details', date:'Date', description:'What happened', lossDesc:'Actual loss', severity:'Potential severity',
+ analyst:'Analyst', status:'Status', draft:'Draft', final:'Final', conclusions:'Conclusions and actions',
+ loss:'Loss', contact:'Contact / energy exchange', immediate:'Immediate causes', basic:'Basic causes', control:'Control actions',
+ lossS:'Loss', contactS:'Contact', immediateS:'Immediate', basicS:'Basic', controlS:'Control',
+ exceptions:'Deviations only', full:'All items', print:'Print / PDF', settings:'Settings', lists:'Item lists',
+ saveLists:'Save lists', resetLists:'Reset to starter set', confirmReset:'Replace all item lists with the starter set? Marks on items that no longer exist will show as removed.',
+ exportAll:'Export everything', exportProject:'Export this project', importFile:'Import file', language:'Language',
+ applies:'Applies', na:'Not applicable', comment:'Comment', commentPh:'What was observed…',
+ keys:'↑ ↓ move · space = applies / not applicable · C = comment · Esc = close comment · ← → block',
+ noProjects:'No projects yet. Create one to start analysing.', noAnalyses:'No analyses in this project yet.',
+ noDev:'No deviations recorded in this block.', removed:'(removed item)', updated:'Updated', duplicate:'Duplicate',
+ timesMarked:'Times marked', acrossN:'across {n} analyses', descPh:'Short factual description of the event', lossPh:'Injury, damage, downtime, release…',
+ conclPh:'Findings, root causes summarised, actions with owner and due date…',
+ listsHelp:'One item per line as <code>English | Nederlands</code>. A line starting with <code>#</code> starts a group heading. Leave the Dutch part empty to reuse the English text. Renamed lines keep their marks; removed lines show as removed in reports.',
+ imported:'Imported {p} project(s)', importErr:'Could not read this file: not a valid export.', replaceProject:'Project "{n}" already exists. Replace it? Cancel keeps the existing one.',
+ replaceTax:'The file contains different item lists. Replace your current lists with them?', saved:'Saved', listsSaved:'Item lists saved',
+ legend:'● applies   – not applicable', reportedOn:'Printed', sev:['1 · Negligible','2 · Minor','3 · Moderate','4 · Serious','5 · Catastrophic'],
+ marked:'marked', untitled:'Untitled', analysesN:'analyses', deviations:'Deviations', items:'items', storage:'Data is stored in this browser only. Export regularly to keep a backup.',
+ dataTitle:'Data', langTitle:'Interface language', ofBlocks:'Marked items per block', total:'Total', noMarks:'Nothing has been marked in this project yet.',
+ goReport:'Open report', item:'Item', count:'Count', newAnalysisTitle:'New analysis',
+ kw:'Kinney & Wiruth', kwW:'Probability (W)', kwB:'Exposure (B)', kwE:'Effect (E)', kwR:'Risk score R = W × B × E', kwNone:'— not set —', kwClassH:'Risk class',
+ kwClass:['Very high risk – stop the activity','High risk – immediate action required','Substantial risk – corrective action needed','Possible risk – attention required','Slight risk – acceptable']
+},
+nl:{
+ appName:'SOAT / SCAT', projects:'Projecten', newProject:'Nieuw project', projectName:'Projectnaam', site:'Locatie / afdeling',
+ create:'Aanmaken', cancel:'Annuleren', analyses:'Analyses', newAnalysis:'Nieuwe analyse', open:'Openen', report:'Rapport',
+ summary:'Projectoverzicht', del:'Verwijderen', confirmDel:'Definitief verwijderen? Dit kan niet ongedaan worden gemaakt.', back:'Terug',
+ details:'Gegevens', date:'Datum', description:'Wat is er gebeurd', lossDesc:'Werkelijk verlies', severity:'Potentiële ernst',
+ analyst:'Analist', status:'Status', draft:'Concept', final:'Definitief', conclusions:'Conclusies en acties',
+ loss:'Verlies', contact:'Contact / energie-uitwisseling', immediate:'Directe oorzaken', basic:'Basisoorzaken', control:'Beheersmaatregelen',
+ lossS:'Verlies', contactS:'Contact', immediateS:'Direct', basicS:'Basis', controlS:'Beheersing',
+ exceptions:'Alleen afwijkingen', full:'Alle items', print:'Printen / PDF', settings:'Instellingen', lists:'Itemlijsten',
+ saveLists:'Lijsten opslaan', resetLists:'Terug naar startset', confirmReset:'Alle itemlijsten vervangen door de startset? Markeringen op items die niet meer bestaan worden als verwijderd getoond.',
+ exportAll:'Alles exporteren', exportProject:'Dit project exporteren', importFile:'Bestand importeren', language:'Taal',
+ applies:'Van toepassing', na:'Niet van toepassing', comment:'Opmerking', commentPh:'Wat is waargenomen…',
+ keys:'↑ ↓ verplaatsen · spatie = van toepassing / n.v.t. · C = opmerking · Esc = opmerking sluiten · ← → blok',
+ noProjects:'Nog geen projecten. Maak er een aan om te beginnen.', noAnalyses:'Nog geen analyses in dit project.',
+ noDev:'Geen afwijkingen vastgelegd in dit blok.', removed:'(verwijderd item)', updated:'Bijgewerkt', duplicate:'Dupliceren',
+ timesMarked:'Aantal keer gemarkeerd', acrossN:'over {n} analyses', descPh:'Korte feitelijke beschrijving van de gebeurtenis', lossPh:'Letsel, schade, stilstand, emissie…',
+ conclPh:'Bevindingen, samenvatting basisoorzaken, acties met eigenaar en datum…',
+ listsHelp:'Eén item per regel als <code>English | Nederlands</code>. Een regel die begint met <code>#</code> start een groepskop. Laat het Nederlandse deel leeg om de Engelse tekst te hergebruiken. Hernoemde regels behouden hun markeringen; verwijderde regels worden in rapporten als verwijderd getoond.',
+ imported:'{p} project(en) geïmporteerd', importErr:'Bestand kon niet worden gelezen: geen geldige export.', replaceProject:'Project "{n}" bestaat al. Vervangen? Annuleren behoudt het bestaande project.',
+ replaceTax:'Het bestand bevat andere itemlijsten. Je huidige lijsten hiermee vervangen?', saved:'Opgeslagen', listsSaved:'Itemlijsten opgeslagen',
+ legend:'● van toepassing   – niet van toepassing', reportedOn:'Afgedrukt', sev:['1 · Verwaarloosbaar','2 · Licht','3 · Matig','4 · Ernstig','5 · Catastrofaal'],
+ marked:'gemarkeerd', untitled:'Zonder titel', analysesN:'analyses', deviations:'Afwijkingen', items:'items', storage:'Gegevens worden alleen in deze browser opgeslagen. Exporteer regelmatig als back-up.',
+ dataTitle:'Gegevens', langTitle:'Taal van de interface', ofBlocks:'Gemarkeerde items per blok', total:'Totaal', noMarks:'In dit project is nog niets gemarkeerd.',
+ goReport:'Rapport openen', item:'Item', count:'Aantal', newAnalysisTitle:'Nieuwe analyse',
+ kw:'Kinney & Wiruth', kwW:'Waarschijnlijkheid (W)', kwB:'Blootstelling (B)', kwE:'Effect (E)', kwR:'Risicoscore R = W × B × E', kwNone:'— niet ingevuld —', kwClassH:'Risicoklasse',
+ kwClass:['Zeer hoog risico – activiteit stoppen','Hoog risico – onmiddellijke maatregelen','Aanzienlijk risico – correctie vereist','Mogelijk risico – aandacht vereist','Licht risico – aanvaardbaar']
+}};
+const t=(k,v)=>{let s=(I18N[state.lang]&&I18N[state.lang][k])??I18N.en[k]??k; if(v)for(const q in v)s=s.replace('{'+q+'}',v[q]); return s;};
+
+/* ---------- starter taxonomy — SOAT v2.0 lists (Aviko sheet), control block = generic ILCI management elements ---------- */
+const STARTER_TEXT={
+ loss:`# Type of loss | Soort verlies
+People (safety and health) | Personen (Veiligheid en Gezondheid)
+Installations / equipment (damage) | Installaties/Uitrusting (Schade)
+Environment | Milieu
+Financial (fines / claims / insurance) | Financieel (Boetes/Claims/Verzekering)
+Material / product / service | Materiaal/Product/Dienst
+Reputation / complaint | Reputatie/Klacht
+Process / operations | Proces/Bedrijfsvoering`,
+ contact:`# Type of event | Type gebeurtenis
+1. Struck against (walking into, hitting, colliding, jamming) | 1. Stoten tegen (tegenaan lopen, raken, botsen, vastlopen)
+2. Struck by (hit by moving object) | 2. Geraakt door (getroffen door bewegend object)
+3. Fall to a different level (person / equipment / material) | 3. Ongelijkvloerse val (van persoon/apparatuur/materiaal)
+4. Fall on the same level (slipping, tripping, falling over) | 4. Gelijkvloerse val (uitglijden, struikelen, omvallen)
+5. Caught in / caught by | 5. Beklemd/Gegrepen door
+6. Contact with extreme temperature (heat / cold) | 6. Contact met extreme temperatuur (hitte/koude)
+7. Contact with electricity | 7. Contact met elektriciteit
+8. Contact with noise | 8. Contact met lawaai
+9. Contact with vibration | 9. Contact met trilling
+10. Contact with radiation | 10. Contact met straling
+11. Disruption / failure of bodily function | 11. Verstoren/Falen lichaamsfunctie
+12. Stress (overload / overpressure / ergonomic factors) | 12. Stress (door overbelasting/overdruk/ergonomische factoren)
+13. Contact with hazardous substance / dose (toxic / corrosive / carcinogenic / biological / viral) | 13. Contact met gevaarlijke stof/dosis (toxisch/corrosief/carcinogeen/biologisch/viraal)
+14. Loss of primary containment | 14. Falen primaire omhulling/insluiting
+15. Release (to air / water, on / into soil / subsoil) | 15. Vrijstelling (naar lucht/water, op/in bodem/ondergrond)
+16. Fire (pool fire / jet fire / flash fire) | 16. Brand (plasbrand/fakkelbrand/wolkbrand)
+17. Explosion (vapour cloud / dust / physical / BLEVE) | 17. Explosie (dampwolk/stof/fysisch/BLEVE)
+18. Failure of mechanical system | 18. Falen mechanisch systeem
+19. Failure of electrical system | 19. Falen van elektrisch systeem
+20. Failure of instrumentation / logic / loop | 20. Falen van instrumentatie/logic/loop
+21. Failure of structure / suspension | 21. Falen van structuur/ophanging
+22. Abnormal operation / process upset | 22. Abnormale bediening/procesverstoring
+23. Instability | 23. Instabiliteit`,
+ immediate:`# Substandard acts | Substandaard handelingen
+1. Operating equipment without authority | 1. Apparatuur gebruiken zonder bevoegdheid
+2. Failure to inform / warn | 2. Niet informeren/waarschuwen
+3. Failure to secure or make safe | 3. Niet borgen of veilig stellen
+4. Working at improper speed | 4. Werken op onjuiste snelheid
+5. Disabling critical safety devices | 5. Kritische beveiligingen buiten werking stellen
+6. Using defective tools / equipment / machinery | 6. Gebruik defect gereedschap/apparatuur/machine
+7. Improper use of tools / equipment / machinery | 7. Onjuist gebruik gereedschap/apparatuur/machine
+8. Improper work on / at operating machinery or equipment | 8. Onjuist werken aan/op in werking zijnde machine/apparatuur
+9. Using incorrect / unsound material | 9. Gebruik van onjuist/ondeugdelijk materiaal
+10. Not using PPE (correctly) | 10. Persoonlijke beschermingsmiddelen niet (juist) gebruiken
+11. Improper stacking / loading | 11. Onjuist stapelen/beladen
+12. Improper placement | 12. Onjuist plaatsen
+13. Improper lifting / hoisting | 13. Onjuist tillen/hijsen
+14. Taking improper position or posture | 14. Onjuiste plaats of houding innemen
+15. Improper / inappropriate behaviour | 15. Onjuist/ongepast gedrag
+16. Under influence of medication / alcohol / drugs | 16. Onder invloed van medicijnen/alcohol/drugs
+17. Not following procedure / instruction | 17. Niet opvolgen van procedure/instructie
+18. Failing to notice a hazard | 18. Niet opmerken van een gevaar
+19. Improper act by external party (outside own control) | 19. Onjuiste handeling door externe partij (buiten eigen controle)
+# Substandard conditions | Substandaard condities
+20. Inadequate condition of floor / surface | 20. Ontoereikende conditie van vloer/oppervlak
+21. Defective tools / equipment | 21. Defect gereedschap/apparatuur
+22. Incorrect / inadequate tools / equipment | 22. Onjuist/ontoereikend gereedschap/apparatuur
+23. Inadequate equipment integrity | 23. Ontoereikende integriteit apparatuur
+24. Inadequate control setting | 24. Ontoereikende bedieningsinstelling
+25. Failure to detect / measure | 25. Falen om te detecteren/meten
+26. Incorrect measurement / signal conversion | 26. Onjuiste meting/signaalomzetting
+27. Incorrect material | 27. Onjuist materiaal
+28. Incorrect composition of material / gas | 28. Onjuiste samenstelling materiaal/gas
+29. Inadequate guarding / barrier | 29. Ontoereikende beveiliging/barrière
+30. Insufficient / incorrect PPE | 30. Onvoldoende/onjuiste persoonlijke beschermingsmiddelen
+31. Congestion / restricted movement space | 31. Drukte/beperkte bewegingsruimte
+32. Inadequate warning system | 32. Ontoereikend waarschuwingssysteem
+33. Presence of flammable / explosive atmosphere | 33. Aanwezigheid brandbare/explosieve atmosfeer
+34. Unauthorised presence of hazardous substances | 34. Niet toegestane aanwezigheid gevaarlijke stoffen
+35. Lack of order / housekeeping | 35. Gebrek aan orde/netheid
+36. Noise | 36. Lawaai
+37. Radiation | 37. Straling
+38. Insufficient / excessive lighting | 38. Onvoldoende/overmatige verlichting
+39. Vibration | 39. Trilling
+40. Extreme temperature | 40. Extreme temperatuur
+41. Extreme pressure | 41. Extreme druk
+42. Insufficient ventilation | 42. Onvoldoende ventilatie
+43. Insufficient information | 43. Onvoldoende informatie
+44. Other hazardous work condition / environment | 44. Andere gevaarlijke werkconditie/werkomgeving
+45. Hazard from external source | 45. Gevaar van externe bron
+46. Exposure to hazardous weather | 46. Blootstelling aan gevaarlijke weerssituatie`,
+ basic:`# Personal factors – 1. Inadequate physical capability | Persoonsgebonden factoren – 1. Onvoldoende fysieke geschiktheid
+1.1 Unsuitable weight, height, size, strength, reach, etc. | 1.1 Niet passend gewicht, lengte, maat, kracht, reikwijdte, etc.
+1.2 Restricted range of movement | 1.2 Beperkte bewegingsmogelijkheid
+1.3 Limited ability to sustain body position | 1.3 Beperkte mogelijkheid tot het innemen lichaamspositie
+1.4 Sensitivity to certain substances, allergies | 1.4 Overgevoeligheid voor bepaalde stoffen, allergieën
+1.5 Sensitivity to temperature, sound, etc. | 1.5 Overgevoeligheid voor temperatuur, geluid, etc.
+1.6 Visual impairment | 1.6 Visuele beperking
+1.7 Hearing problem | 1.7 Gehoorprobleem
+1.8 Other sensory problem (smell, taste, touch, balance) | 1.8 Ander zintuiglijk probleem (reuk, smaak, tast, evenwicht)
+1.9 Respiratory problem | 1.9 Ademhalingsprobleem
+1.10 Other permanent physical limitation | 1.10 Andere permanente lichamelijke beperking
+1.11 Temporary physical limitation | 1.11 Tijdelijke lichamelijke beperking
+# 2. Inadequate mental capability | 2. Onvoldoende mentale geschiktheid
+2.1 Fear or phobia | 2.1 Angst of fobie
+2.2 Emotional disturbance | 2.2 Emotionele verstoring
+2.3 Mental illness | 2.3 Mentale ziekte
+2.4 Intelligence level | 2.4 Intelligentieniveau
+2.5 Inability to comprehend | 2.5 Onvermogen om te begrijpen
+2.6 Poor judgement | 2.6 Slecht beoordelingsvermogen
+2.7 Poor coordination | 2.7 Slechte coördinatie
+2.8 Slow reaction | 2.8 Langzame reactie
+2.9 Limited mechanical aptitude | 2.9 Beperkte mechanische aanleg
+2.10 Limited learning ability | 2.10 Beperkt leervermogen
+2.11 Memory loss | 2.11 Geheugenverlies
+# 3. Physical stress | 3. Fysieke stress
+3.1 Injury or illness | 3.1 Letsel of ziekte
+3.2 Fatigue due to workload or working hours | 3.2 Vermoeidheid door werkbelasting of -tijd
+3.3 Fatigue due to lack of rest | 3.3 Vermoeidheid door gebrek aan rust
+3.4 Fatigue due to sensory overload | 3.4 Vermoeidheid door zintuiglijke overbelasting
+3.5 Exposure to health hazards | 3.5 Blootstelling aan gezondheidsgevaren
+3.6 Exposure to extreme temperatures | 3.6 Blootstelling aan extreme temperaturen
+3.7 Oxygen deficiency | 3.7 Gebrek aan zuurstof
+3.8 Atmospheric pressure changes | 3.8 Atmosferische drukveranderingen
+3.9 Restricted freedom of movement | 3.9 Beperkte bewegingsvrijheid
+3.10 Abnormal blood sugar level | 3.10 Onjuist bloedsuikergehalte
+3.11 Use of drugs or medication, self-imposed stress | 3.11 Gebruik drugs of medicijnen, zelfopgelegde stress
+# 4. Mental stress | 4. Mentale stress
+4.1 Emotional overload | 4.1 Emotionele overbelasting
+4.2 Fatigue due to workload or time pressure | 4.2 Vermoeidheid door werkdruk of tijdsdruk
+4.3 Extreme judgement / decision-making demands | 4.3 Extreme eisen m.b.t. beoordeling/besluitvorming
+4.4 Routine / monotonous work, no call on vigilance | 4.4 Routine/monotone werkzaamheden, geen beroep op waakzaamheid
+4.5 Extreme concentration or perception demands | 4.5 Extreme concentratie of waarnemingseisen
+4.6 'Meaningless' or 'degrading' work | 4.6 'Zinloze' of 'minderwaardige' werkzaamheid
+4.7 Confusing instructions | 4.7 Verwarrende instructies
+4.8 Conflicting demands / directions | 4.8 Tegenstrijdige eisen/aanwijzingen
+4.9 Preoccupation with problem / worries | 4.9 In beslag genomen door probleem/zorgen
+4.10 Frustration | 4.10 Frustratie
+4.11 Mental illness | 4.11 Mentale ziekte
+# 5. Lack of knowledge | 5. Gebrek aan kennis
+5.1 Lack of experience | 5.1 Gebrek aan ervaring
+5.2 Inadequate briefing / orientation | 5.2 Onjuiste voorlichting
+5.3 Inadequate initial training | 5.3 Onjuiste basistraining
+5.4 Inadequate refresher training | 5.4 Onjuiste herhalingstraining
+5.5 Misunderstood instruction / information | 5.5 Verkeerd begrepen instructie/informatie
+5.6 Lack of awareness of the situation / risk | 5.6 Gebrek aan bewustzijn van de situatie/het risico
+# 6. Lack of skill | 6. Gebrek aan vaardigheid
+6.1 Inadequate initial instruction / training | 6.1 Onvoldoende initiële instructie/training
+6.2 Inadequate practice | 6.2 Onvoldoende praktijk
+6.3 Infrequent performance | 6.3 Te weinig uitvoering
+6.4 Lack of coaching | 6.4 Gebrek aan begeleiding
+6.5 Inadequate refresher instruction | 6.5 Onvoldoende herhalingsinstructie
+# 7. Improper motivation | 7. Onjuiste motivatie
+7.1 Improper performance is tolerated / rewarded | 7.1 Onjuiste prestatie wordt getolereerd/beloond
+7.2 Proper performance is discouraged / punished | 7.2 Juiste prestatie wordt ontmoedigd/bestraft
+7.3 Lack of encouragement | 7.3 Gebrek aan aanmoediging
+7.4 Improper incentive for production | 7.4 Onjuiste aanmoediging voor productie
+7.5 Excessive frustration | 7.5 Excessieve frustratie
+7.6 Improper aggression | 7.6 Onjuiste agressiviteit
+7.7 Improper attempt to save time / effort | 7.7 Onjuiste poging om tijd/moeite te besparen
+7.8 Improper attempt to avoid discomfort | 7.8 Onjuiste poging om ongemak te vermijden
+7.9 Improper attempt to gain attention | 7.9 Onjuiste poging om aandacht te krijgen
+7.10 Improper discipline | 7.10 Onjuiste discipline
+7.11 Improper peer pressure | 7.11 Onjuiste druk van collega's
+7.12 Improper example set by leaders | 7.12 Onjuist voorbeeld van leiders
+7.13 Inadequate performance feedback | 7.13 Onvoldoende terugkoppeling van prestaties
+7.14 Inadequate reinforcement of proper behaviour | 7.14 Onvoldoende versterking van juiste gedrag
+7.15 Abuse (deliberate) | 7.15 Misbruik (opzettelijk)
+7.16 Misuse (unintentional) | 7.16 Verkeerd gebruik (zonder opzet)
+# Job factors – 8. Unclear organisational structure | Werkgebonden factoren – 8. Onduidelijke organisatiestructuur
+8.1 Unclear / conflicting reporting lines | 8.1 Onduidelijke/tegenstrijdige hiërarchische verhouding
+8.2 Unclear / conflicting assignment of function / role | 8.2 Onduidelijke/tegenstrijdige toewijzing van functie/rol
+8.3 Unclear / conflicting accountability / responsibility / task | 8.3 Onduidelijke/tegenstrijdige toerekenbaarheid/verantwoordelijkheid/taak
+# 9. Inadequate leadership | 9. Onvoldoende leiderschap
+9.1 Inadequate strategy | 9.1 Onvoldoende strategie
+9.2 Inadequate leadership development | 9.2 Onvoldoende ontwikkeling van leiderschap
+9.3 Inadequate delegation | 9.3 Onvoldoende delegatie
+9.4 Inadequate standards | 9.4 Ontoereikende standaards
+9.5 Inadequate communication / implementation of policy / procedure | 9.5 Ontoereikende communicatie/implementatie van beleid/procedure
+9.6 Conflicting policy / procedure / practice | 9.6 Conflicterend beleid/procedure/praktijk
+9.7 Inadequate work / process planning / scheduling | 9.7 Ontoereikende werk-, procesplanning/-programmering
+9.8 Allowing deviation from policy / procedures / practice | 9.8 Toestaan van afwijken van beleid/procedures/praktijk
+9.9 Allowing improper use of equipment / tools | 9.9 Toestaan van onjuist gebruik van apparatuur/gereedschap
+9.10 Allowing improper / inappropriate behaviour | 9.10 Toestaan van onjuist/ongepast gedrag
+9.11 Inadequate management information | 9.11 Ontoereikende managementinformatie
+# 10. Inadequate supervision / coaching | 10. Onvoldoende supervisie/coaching
+10.1 Inadequate instruction / induction / training | 10.1 Ontoereikende instructie/introductie/training
+10.2 Inadequate information / documents for supervision / coaching | 10.2 Ontoereikende informatie/documenten voor supervisie/coaching
+10.3 Lack of leadership knowledge | 10.3 Gebrek aan leiderschapskennis
+10.4 Inadequate qualifications for task / function | 10.4 Ontoereikende kwalificaties voor taak/functie
+10.5 Inadequate performance measurement / evaluation | 10.5 Ontoereikende prestatiemeting/evaluatie
+10.6 Inadequate performance feedback | 10.6 Ontoereikende terugkoppeling prestaties
+# 11. Inadequate change / engineering | 11. Ongeschikte wijziging
+11.1 Inadequate risk identification and evaluation in design | 11.1 Ontoereikende risico-identificatie en evaluatie in ontwerp
+11.2 Inadequate identification of failure causes | 11.2 Ontoereikende identificatie van faaloorzaken
+11.3 Inadequate evaluation of customer / stakeholder requirements | 11.3 Ontoereikende evaluatie van eisen van klanten/belanghebbenden
+11.4 Inadequate identification of legal requirements | 11.4 Ontoereikende identificatie van wettelijke eisen
+11.5 Inadequate consideration of human factors / ergonomics in design | 11.5 Ontoereikende beschouwing van mens/ergonomie in ontwerp
+11.6 Inadequate design of process / standard / specification / criterion | 11.6 Ontoereikend ontwerp proces/standaard/specificatie/criterium
+11.7 Inadequate process control automation | 11.7 Ontoereikende procescontrole-automatisering
+11.8 Inadequate / missing (technical) standard / specification | 11.8 Ontoereikende/ontbrekende (technische) standaard/specificatie
+11.9 Inadequate project review | 11.9 Ontoereikende projectbeoordeling
+11.10 Inadequate control during construction / fabrication / assembly | 11.10 Ontoereikende controle tijdens constructie/fabricage/samenstelling
+11.11 Inadequate assessment of operational readiness | 11.11 Ontoereikende beoordeling van het bedrijfsklaar zijn
+11.12 Inadequate process start-up / handover | 11.12 Ontoereikend proces opstart/overdracht
+11.13 Inadequate control during initial operation | 11.13 Ontoereikende controle tijdens initiële bedrijfsvoering
+11.14 Inadequate change evaluation | 11.14 Ontoereikende beoordeling van wijziging
+# 12. Inadequate supply chain management | 12. Ontoereikend Supply Chain Management
+12.1 Inadequate specification of purchasing requirements | 12.1 Ontoereikende specificaties van inkoopbehoefte
+12.2 Inadequate research of material / equipment / tools | 12.2 Ontoereikend onderzoek materiaal/apparatuur/gereedschap
+12.3 Inadequate specification to supplier | 12.3 Ontoereikende specificatie aan leverancier
+12.4 Inadequate mode / route of transport | 12.4 Ontoereikende transportwijze/route
+12.5 Inadequate incoming inspection and acceptance | 12.5 Ontoereikende ingangscontrole en acceptatie
+12.6 Inadequate communication of safety / health data | 12.6 Ontoereikende communicatie veiligheids/gezondheidsgegevens
+12.7 Improper handling of material | 12.7 Onjuiste omgang met materiaal
+12.8 Improper storage of material | 12.8 Onjuiste opslag van materiaal
+12.9 Improper transport of material | 12.9 Onjuist transport van materiaal
+12.10 Inadequate shelf life / validation for reuse of material / equipment | 12.10 Ontoereikende houdbaarheid/validatie voor hergebruik materiaal/apparatuur
+12.11 Inadequate identification of material | 12.11 Ontoereikende identificatie van materiaal
+12.12 Improper clean-up and disposal of waste | 12.12 Onjuist opruimen en verwijderen afval
+12.13 Inadequate selection of contractor / supplier | 12.13 Ontoereikende selectie aannemer/leverancier
+# 13. Inadequate maintenance / inspection | 13. Onvoldoende onderhoud/inspectie
+13.1 Inadequate assessment of preventive maintenance needs | 13.1 Onvoldoende vaststelling behoefte preventief onderhoud
+13.2 Inadequate preventive checking, lubrication and servicing | 13.2 Onvoldoende preventieve controle, smering en onderhoud
+13.3 Inadequate adjustment / assembly | 13.3 Onvoldoende bijstellen/samenstellen
+13.4 Inadequate preventive cleaning / surface treatment | 13.4 Onvoldoende preventief schoonmaken/oppervlaktebehandeling
+13.5 Inadequate communication of corrective maintenance needs | 13.5 Onvoldoende communicatie correctieve onderhoudsbehoeften
+13.6 Inadequate planning of maintenance work | 13.6 Onvoldoende planning onderhoudswerk
+13.7 Inadequate assessment of repair needs | 13.7 Onvoldoende beoordeling herstellingsbehoeften
+13.8 Inadequate replacement of parts | 13.8 Onvoldoende vervanging onderdelen
+13.9 Inadequate inspection method / interval | 13.9 Onvoldoende inspectie methode/interval
+13.10 Not possible to inspect | 13.10 Niet mogelijk om te inspecteren
+# 14. Wear and tear | 14. Slijtage
+14.1 Improper planning of use / application | 14.1 Onjuiste planning gebruik/toepassing
+14.2 Improper extension of service life | 14.2 Onjuiste verlenging gebruiksduur
+14.3 Improper inspection / assessment | 14.3 Onjuiste inspectie/beoordeling
+14.4 Improper loading / intensity of use | 14.4 Onjuiste belasting/gebruiksintensiteit
+14.5 Use for the wrong purpose / task / activity | 14.5 Gebruik voor het verkeerde doel/taak/activiteit
+# 15. Incorrect tools / equipment / machinery | 15. Onjuist gereedschap/apparatuur/machine
+15.1 Inadequate assessment of needs and risks | 15.1 Onvoldoende vaststelling behoefte en risico's
+15.2 Inadequate assessment of ergonomic factors | 15.2 Onvoldoende beoordeling ergonomische factoren
+15.3 Incorrect (supplier) standard / specification | 15.3 Onjuiste (leveranciers-)norm/specificatie
+15.4 Incorrect measurement / detection / (process) control | 15.4 Incorrecte meting/detectie/(proces)controle
+15.5 Inadequate availability of tools / equipment / machinery | 15.5 Ontoereikende beschikbaarheid gereedschap/apparatuur/machine
+15.6 Inadequate inspection / repair / maintenance | 15.6 Onvoldoende inspectie/reparatie/onderhoud
+15.7 Inadequate adjustment / calibration | 15.7 Ontoereikende aanpassing/ijking
+15.8 Inadequate salvage and reuse | 15.8 Onvoldoende berging en hergebruik
+15.9 Inadequate removal and replacement of unsuitable items | 15.9 Onvoldoende verwijdering en vervanging ongeschikt artikel
+# 16. Incorrect product | 16. Onjuist product
+16.1 Inadequate assessment of need / risk | 16.1 Ontoereikende beoordeling van behoefte/risico
+16.2 Inadequate product standard / specification / classification | 16.2 Ontoereikend productstandaard/specificatie/classificatie
+16.3 Inadequate product design / development | 16.3 Ontoereikend productontwerp/ontwikkeling
+16.4 Inadequate product standard | 16.4 Ontoereikende productstandaard
+16.5 Inadequate product design validation | 16.5 Ontoereikende productontwerpvalidatie
+16.6 Inadequate product design verification | 16.6 Ontoereikende productontwerpverificatie
+16.7 Inadequate product planning | 16.7 Ontoereikende productplanning
+16.8 Inadequate final inspection of product / delivery | 16.8 Ontoereikende eindcontrole product/levering
+# 17. Incorrect work / production standard | 17. Onjuiste werk/productiestandaard
+17.1 Inadequate identification of requirements (legislation / standards / permit) | 17.1 Onvoldoende identificatie eisen (wet- en regelgeving/normen/vergunning)
+17.2 Inadequate risk assessment when developing the standard | 17.2 Onvoldoende risicobeoordeling bij ontwikkelen standaard
+17.3 Incorrect requirements for supplier / contractor | 17.3 Onjuiste eisen aan leverancier/aannemer
+17.4 Inadequate alignment of standards with process design | 17.4 Onvoldoende afstemming standaarden met procesontwerp
+17.5 Inadequate employee involvement | 17.5 Onvoldoende betrokkenheid werknemers
+17.6 Conflicting requirements / standards / incorrect prioritisation | 17.6 Tegenstrijdige eisen/standaarden/onjuiste prioriteitstelling
+17.7 Incorrect publication of the standard | 17.7 Onjuiste publicatie standaard
+17.8 Incorrect distribution of the standard | 17.8 Onjuiste verspreiding van norm
+17.9 Incorrect / insufficient translation into the language of those involved | 17.9 Onjuiste/onvoldoende vertaling in taal betrokkenen
+17.10 Incorrect use of language / words / terms | 17.10 Onjuist gebruik taal/woorden/termen
+17.11 Inadequate training in the standard | 17.11 Onvoldoende training van standaard
+17.12 Inadequate reinforcement with signs, colour codes and aids | 17.12 Ontoereikende versterking met tekens, kleurcodes en hulpmiddelen
+17.13 Inadequate monitoring of compliance with the standard | 17.13 Onvoldoende controle op naleving standaard
+# 18. Inadequate communication / information | 18. Ontoereikende communicatie/informatie
+18.1 Inadequate information / handover | 18.1 Onvoldoende informatie/overdracht
+18.2 Unclear information | 18.2 Onduidelijke informatie
+18.3 Inadequate transfer of information between processes / departments | 18.3 Ontoereikende overdracht van informatie tussen processen/afdelingen
+18.4 Inadequate transfer of information with customer / stakeholder | 18.4 Ontoereikende overdracht van informatie met klant/belanghebbende
+18.5 Inadequate transfer of information with authorities | 18.5 Ontoereikende overdracht van informatie met autoriteit
+18.6 Inadequate transfer of information with supplier / contractor / third party | 18.6 Ontoereikende overdracht van informatie met leverancier/aannemer/derde partij
+18.7 Inadequate communication structure | 18.7 Ontoereikende communicatiestructuur
+18.8 Inadequate database / information system | 18.8 Ontoereikende database/informatiesysteem
+18.9 Inadequate communication method / technique | 18.9 Ontoereikende communicatiemethode/-techniek`,
+ control:`# Management system elements | Elementen van het managementsysteem
+Leadership and administration | Leiderschap en beheer
+Management training | Training van leidinggevenden
+Planned inspections and maintenance | Geplande inspecties en onderhoud
+Task analysis and procedures | Taakanalyse en procedures
+Incident investigation | Incidentonderzoek
+Task observation | Taakobservatie
+Emergency preparedness | Voorbereiding op noodsituaties
+Organisational rules | Organisatorische regels
+Incident analysis (trends) | Incidentanalyse (trends)
+Employee training and competence | Training en competentie van medewerkers
+Personal protective equipment | Persoonlijke beschermingsmiddelen
+Health and hygiene control | Gezondheids- en hygiënebeheersing
+Programme evaluation and audits | Programma-evaluatie en audits
+Engineering and change management | Engineering en wijzigingsbeheer
+Personal communication | Persoonlijke communicatie
+Group meetings and toolbox talks | Werkoverleg en toolboxmeetings
+General promotion and awareness | Algemene promotie en bewustwording
+Hiring and placement | Werving en plaatsing
+Purchasing and contractor controls | Inkoop- en aannemersbeheersing
+Off-the-job safety | Veiligheid buiten het werk`
+};
+function starterTaxonomy(){return {ver:2,blocks:Object.keys(STARTER_TEXT).map(k=>parseTax(k,STARTER_TEXT[k],{items:[]}))};}
+
+/* ---------- Kinney & Wiruth scales ---------- */
+const KW={
+ W:[[10,'Expected','Te verwachten'],[6,'Quite possible','Zeer wel mogelijk'],[3,'Unusual','Ongewoon'],[1,'Unlikely, but possible in borderline case','Onwaarschijnlijk, maar mogelijk in grensgeval'],[0.3,'Conceivable, but unlikely','Denkbaar, maar onwaarschijnlijk'],[0.2,'Practically impossible','Praktisch onmogelijk'],[0.1,'Virtually inconceivable','Bijna niet denkbaar']],
+ B:[[10,'Continuous','Voortdurend'],[6,'Regularly (daily)','Regelmatig (dagelijks)'],[3,'Occasionally (weekly)','Af en toe (wekelijks)'],[2,'Sometimes (monthly)','Soms (maandelijks)'],[1,'Rarely (yearly)','Zelden (jaarlijks)'],[0.5,'Very rarely','Zeer zelden']],
+ E:[[40,'Disaster: several fatalities (acute or delayed)','Ramp: enkele doden (acuut of op termijn)'],[15,'Very serious: one fatality (acute or delayed)','Zeer ernstig: een dode (acuut of op termijn)'],[7,'Serious: irreversible effect (disability)','Ernstig: irreversibel effect (invaliditeit)'],[3,'Significant: injury with lost time','Belangrijk: letsel en verzuim'],[1,'Minor: injury without lost time (first aid) or nuisance','Gering: letsel zonder verzuim (EHBO) of hinder']]};
+function kwScore(a){if(!a.kwW||!a.kwB||!a.kwE)return null;const r=a.kwW*a.kwB*a.kwE;const cls=r>400?0:r>200?1:r>70?2:r>20?3:4;return {r:Math.round(r*10)/10,cls};}
+function kwText(a){const k=kwScore(a);return k?`${a.kwW} × ${a.kwB} × ${a.kwE} = ${k.r} · ${t('kwClass')[k.cls]}`:t('kwNone');}
+
+/* ---------- state ---------- */
+const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+const today=()=>new Date().toISOString().slice(0,10);
+function fresh(){return {v:1,lang:'en',taxonomy:starterTaxonomy(),projects:[],ui:{view:'projects',pid:null,aid:null,step:'loss',report:'exc'}};}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.v===1)return s;}catch(e){}return null;}
+let state=load()||fresh();
+if(!state.taxonomy.ver){state.taxonomy=starterTaxonomy();}
+for(const p of state.projects)for(const a of p.analyses)for(const id in a.marks)if(a.marks[id].s===2)a.marks[id].s=0;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){toast('Storage error: '+e.message);}}
+const proj=()=>state.projects.find(p=>p.id===state.ui.pid);
+const ana=()=>{const p=proj();return p&&p.analyses.find(a=>a.id===state.ui.aid);};
+const block=k=>state.taxonomy.blocks.find(b=>b.key===k);
+const name=it=>(state.lang==='nl'&&it.nl)?it.nl:it.en;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mark=(a,id)=>a.marks[id]||{s:0,c:''};
+const isDev=m=>m.s===1||!!(m.c&&m.c.trim());
+const GL=['–','●'];
+
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),1600);}
+function go(view,extra){Object.assign(state.ui,{view},extra||{});save();render();window.scrollTo(0,0);}
+
+/* ---------- counts ---------- */
+function blockCounts(a,key){let m=0,c=0,tot=0;for(const it of block(key).items){if(it.t)continue;tot++;const k=mark(a,it.id);if(k.s===1)m++;if(k.c&&k.c.trim())c++;}return {m,c,tot};}
+function devCount(a){return Object.values(a.marks).filter(isDev).length;}
+
+/* ---------- render ---------- */
+function render(){renderTop();const v=state.ui.view;const app=document.getElementById('app');
+  if(v==='projects')app.innerHTML=vProjects();
+  else if(v==='project')app.innerHTML=vProject();
+  else if(v==='analysis')app.innerHTML=vAnalysis();
+  else if(v==='report')app.innerHTML=vReport();
+  else if(v==='summary')app.innerHTML=vSummary();
+  else if(v==='settings')app.innerHTML=vSettings();
+  document.documentElement.lang=state.lang;
+  setPrintOrientation();
+}
+function renderTop(){
+  const p=proj(),a=ana();
+  let crumbs=`<button class="link" data-go="projects">${t('projects')}</button>`;
+  if(p&&state.ui.view!=='projects')crumbs+=`<span>›</span><button class="link" data-go="project"><b>${esc(p.name)}</b></button>`;
+  if(a&&(state.ui.view==='analysis'||state.ui.view==='report'))crumbs+=`<span>›</span><b>${esc(a.date||'')} ${esc(short(a.description)||t('untitled'))}</b>`;
+  if(state.ui.view==='summary')crumbs+=`<span>›</span><b>${t('summary')}</b>`;
+  if(state.ui.view==='settings')crumbs+=`<span>›</span><b>${t('settings')}</b>`;
+  document.getElementById('top').innerHTML=`<div class="brand">${t('appName')}</div><div class="crumbs">${crumbs}</div>
+   <div class="seg"><button data-lang="en" class="${state.lang==='en'?'on':''}">EN</button><button data-lang="nl" class="${state.lang==='nl'?'on':''}">NL</button></div>
+   <button data-go="settings" title="${t('settings')}">⚙</button>`;
+}
+const short=(s,n=48)=>{s=(s||'').trim().split('\n')[0];return s.length>n?s.slice(0,n-1)+'…':s;};
+
+function vProjects(){
+  const rows=state.projects.slice().sort((x,y)=>(y.updated||'').localeCompare(x.updated||'')).map(p=>`<tr class="click" data-open-p="${p.id}"><td><b>${esc(p.name)}</b></td><td>${esc(p.site||'')}</td><td class="num">${p.analyses.length}</td><td class="muted">${esc((p.updated||'').slice(0,10))}</td><td class="num"><button class="link danger" data-del-p="${p.id}">${t('del')}</button></td></tr>`).join('');
+  return `<div class="stack">
+   <div class="row"><h1 class="grow">${t('projects')}</h1></div>
+   <form id="newProj" class="row" autocomplete="off"><input type="text" name="name" placeholder="${t('projectName')}" required style="max-width:280px"><input type="text" name="site" placeholder="${t('site')}" style="max-width:240px"><button class="primary">${t('newProject')}</button></form>
+   ${state.projects.length?`<table class="list"><thead><tr><th>${t('projectName')}</th><th>${t('site')}</th><th class="num">${t('analyses')}</th><th>${t('updated')}</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty">${t('noProjects')}</div>`}
+   <p class="small muted">${t('storage')}</p></div>`;
+}
+
+function vProject(){
+  const p=proj();if(!p)return vProjects();
+  const rows=p.analyses.slice().sort((x,y)=>(y.date||'').localeCompare(x.date||'')).map(a=>`<tr class="click" data-open-a="${a.id}">
+    <td style="white-space:nowrap">${esc(a.date||'')}</td><td>${esc(short(a.description,70))||'<span class="muted">'+t('untitled')+'</span>'}</td><td>${a.sev?esc(t('sev')[a.sev-1]):''}${(()=>{const k=kwScore(a);return k?' · R '+k.r:'';})()}</td>
+    <td>${t(a.status||'draft')}</td><td class="num">${devCount(a)}</td>
+    <td class="num" style="white-space:nowrap"><button class="link" data-rep-a="${a.id}">${t('report')}</button> <button class="link" data-dup-a="${a.id}">${t('duplicate')}</button> <button class="link danger" data-del-a="${a.id}">${t('del')}</button></td></tr>`).join('');
+  return `<div class="stack">
+   <div class="row"><div class="grow"><h1>${esc(p.name)}</h1><div class="muted">${esc(p.site||'')}</div></div><button data-go="summary">${t('summary')}</button><button data-export-p="${p.id}">${t('exportProject')}</button><button class="primary" id="newAna">${t('newAnalysis')}</button></div>
+   ${p.analyses.length?`<table class="list"><thead><tr><th>${t('date')}</th><th>${t('description')}</th><th>${t('severity')}</th><th>${t('status')}</th><th class="num">${t('deviations')}</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty">${t('noAnalyses')}</div>`}
+  </div>`;
+}
+
+function vAnalysis(){
+  const a=ana();if(!a)return vProject();
+  const step=state.ui.step;
+  const railBtn=(k,label,cnt)=>`<button class="rb ${step===k?'on':''}" data-step="${k}"><span>${label}</span><span class="cnt">${cnt??''}</span></button>`;
+  let rail=railBtn('details',t('details'));
+  for(const k of BLOCKS){const c=blockCounts(a,k);rail+=railBtn(k,t(k+'S'),`<b>${c.m}</b>${c.c?' ✎'+c.c:''}<span class="muted">/${c.tot}</span>`);}
+  rail+=railBtn('conclusions',t('conclusions'),a.conclusions?'✎':'');
+  rail+=`<hr><button class="go primary" data-go="report">${t('goReport')}</button>`;
+  let main='';
+  if(step==='details')main=vDetails(a);
+  else if(step==='conclusions')main=`<h2>${t('conclusions')}</h2><textarea data-f="conclusions" rows="12" placeholder="${t('conclPh')}" style="margin-top:10px">${esc(a.conclusions||'')}</textarea>`;
+  else main=vBlock(a,step);
+  return `<div class="an"><nav class="rail">${rail}</nav><section>${main}</section></div>`;
+}
+function vDetails(a){
+  const sev=[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(a.sev||0)===i?'selected':''}>${i?esc(t('sev')[i-1]):'—'}</option>`).join('');
+  return `<h2>${t('details')}</h2><div class="grid2" style="margin-top:10px">
+   <label class="f"><span>${t('date')}</span><input type="date" data-f="date" value="${esc(a.date||'')}"></label>
+   <label class="f"><span>${t('site')}</span><input type="text" data-f="site" value="${esc(a.site||'')}"></label>
+   <label class="f"><span>${t('analyst')}</span><input type="text" data-f="analyst" value="${esc(a.analyst||'')}"></label>
+   <label class="f"><span>${t('severity')}</span><select data-f="sev">${sev}</select></label>
+   <label class="f span"><span>${t('kw')}</span></label>
+   ${['W','B','E'].map(k=>`<label class="f"><span>${t('kw'+k)}</span><select data-f="kw${k}"><option value="0">—</option>${KW[k].map(o=>`<option value="${o[0]}" ${a['kw'+k]===o[0]?'selected':''}>${o[0]} · ${state.lang==='nl'?o[2]:o[1]}</option>`).join('')}</select></label>`).join('')}
+   <label class="f"><span>${t('kwR')}</span><div id="kwOut" style="padding:6px 0;font-weight:600">${kwText(a)}</div></label>
+   <label class="f"><span>${t('status')}</span><select data-f="status"><option value="draft" ${a.status!=='final'?'selected':''}>${t('draft')}</option><option value="final" ${a.status==='final'?'selected':''}>${t('final')}</option></select></label>
+   <label class="f span"><span>${t('description')}</span><textarea data-f="description" placeholder="${t('descPh')}">${esc(a.description||'')}</textarea></label>
+   <label class="f span"><span>${t('lossDesc')}</span><textarea data-f="lossDesc" placeholder="${t('lossPh')}">${esc(a.lossDesc||'')}</textarea></label>
+  </div>`;
+}
+function itemRow(a,it){
+  const m=mark(a,it.id),open=state.ui.openC===it.id;
+  return `<div class="item s${m.s} ${m.c&&m.c.trim()?'hc':''}" tabindex="0" data-id="${it.id}" role="button" aria-pressed="${m.s===1}">
+    <span class="st">${GL[m.s]}</span><span class="tx">${esc(name(it))}</span><span class="cb" data-c="${it.id}" title="${t('comment')}">✎</span></div>
+   <div class="cmt ${open?'':'hidden'}" data-cw="${it.id}"><textarea data-cm="${it.id}" placeholder="${t('commentPh')}">${esc(m.c||'')}</textarea></div>`;
+}
+function vBlock(a,key){
+  const b=block(key);const c=blockCounts(a,key);
+  const rows=b.items.map(it=>it.t?`<div class="grp">${esc(name(it))}</div>`:itemRow(a,it)).join('');
+  return `<div class="blockhead"><h2>${t(key)}</h2><span class="muted">${c.m} ${t('marked')} / ${c.tot}</span></div>
+   <div class="keys">${t('keys')}</div>
+   <div class="items" id="items">${rows}</div>
+   <div class="legend"><i>${t('legend')}</i></div>`;
+}
+
+function reportBlock(a,key,mode){
+  const b=block(key);let out='';let anyDev=false,pendingGroup='';
+  for(const it of b.items){
+    if(it.t){pendingGroup=`<tr><td class="g" colspan="3">${esc(name(it))}</td></tr>`;if(mode==='full'){out+=pendingGroup;pendingGroup='';}continue;}
+    const m=mark(a,it.id);
+    if(mode==='exc'&&!isDev(m))continue;
+    if(pendingGroup){out+=pendingGroup;pendingGroup='';}
+    anyDev=true;
+    out+=`<tr class="s${m.s}"><td class="st">${GL[m.s]}</td><td class="tx">${esc(name(it))}</td><td class="c">${esc(m.c||'')}</td></tr>`;
+  }
+  // marks on items no longer in the list
+  const known=new Set(b.items.filter(i=>!i.t).map(i=>i.id));
+  for(const id in a.marks){if(id.startsWith(key+'.')&&!known.has(id)&&isDev(a.marks[id])){anyDev=true;const m=a.marks[id];out+=`<tr class="s${m.s}"><td class="st">${GL[m.s]}</td><td class="tx"><i>${t('removed')}</i> ${esc(id)}</td><td class="c">${esc(m.c||'')}</td></tr>`;}}
+  return `<div class="blk"><h2>${t(key)}</h2>${anyDev?`<table class="rt ${mode==='full'?'dense':''}">${out}</table>`:`<div class="none">${t('noDev')}</div>`}</div>`;
+}
+function vReport(){
+  const a=ana(),p=proj();if(!a)return vProject();
+  const mode=state.ui.report;
+  const dev=devCount(a);
+  const blocks=BLOCKS.map(k=>reportBlock(a,k,mode)).join('');
+  return `<div class="row noprint" style="margin-bottom:14px"><button data-go="analysis">← ${t('back')}</button><div class="grow"></div>
+    <div class="seg"><button data-rep="exc" class="${mode==='exc'?'on':''}">${t('exceptions')}</button><button data-rep="full" class="${mode==='full'?'on':''}">${t('full')}</button></div>
+    <button class="primary" onclick="window.print()">${t('print')}</button></div>
+   <article class="rp ${mode==='full'?'full':''}">
+    <h1>${t('appName')} — ${esc(p.name)}</h1>
+    <dl class="rhead" style="margin-top:10px">
+     <dt>${t('date')}</dt><dd>${esc(a.date||'')}</dd>
+     <dt>${t('site')}</dt><dd>${esc(a.site||p.site||'')}</dd>
+     <dt>${t('analyst')}</dt><dd>${esc(a.analyst||'')}</dd>
+     <dt>${t('severity')}</dt><dd>${a.sev?esc(t('sev')[a.sev-1]):''}</dd>
+     <dt>${t('kw')}</dt><dd>${esc(kwText(a))}</dd>
+     <dt>${t('status')}</dt><dd>${t(a.status||'draft')} · ${dev} ${t('deviations').toLowerCase()}</dd>
+     <dt>${t('description')}</dt><dd class="wide">${esc(a.description||'')}</dd>
+     <dt>${t('lossDesc')}</dt><dd class="wide">${esc(a.lossDesc||'')}</dd>
+    </dl>
+    <div class="blocks">${blocks}</div>
+    <div class="blk"><h2>${t('conclusions')}</h2><div class="concl">${esc(a.conclusions||'')||'<span class="muted">—</span>'}</div></div>
+    <div class="foot"><span>${t('legend')}</span><span>${t('reportedOn')} ${today()}</span></div>
+   </article>`;
+}
+function vSummary(){
+  const p=proj();if(!p)return vProjects();
+  const n=p.analyses.length;const counts={};
+  for(const a of p.analyses)for(const id in a.marks)if(a.marks[id].s===1)counts[id]=(counts[id]||0)+1;
+  let body='',any=false;
+  for(const k of BLOCKS){const b=block(k);let rows='';for(const it of b.items){if(it.t)continue;const c=counts[it.id];if(!c)continue;any=true;rows+=`<tr><td class="num" style="width:60px">${c}</td><td>${esc(name(it))}</td></tr>`;}
+    if(rows)body+=`<div class="blk"><h2>${t(k)}</h2><table class="rt dense">${rows}</table></div>`;}
+  return `<div class="row noprint" style="margin-bottom:14px"><button data-go="project">← ${t('back')}</button><div class="grow"></div><button class="primary" onclick="window.print()">${t('print')}</button></div>
+   <article class="rp"><h1>${t('summary')} — ${esc(p.name)}</h1><p class="muted">${t('timesMarked')} ${t('acrossN',{n})}</p>
+   ${any?body:`<div class="none">${t('noMarks')}</div>`}
+   <div class="foot"><span>${esc(p.site||'')}</span><span>${t('reportedOn')} ${today()}</span></div></article>`;
+}
+function taxText(b){return b.items.map(it=>it.t?`# ${it.en}${it.nl&&it.nl!==it.en?' | '+it.nl:''}`:`${it.en}${it.nl&&it.nl!==it.en?' | '+it.nl:''}`).join('\n');}
+function kwTable(){const L=state.lang==='nl'?2:1;
+  const col=(k)=>`<table class="list"><thead><tr><th>${t('kw'+k)}</th><th class="num">${k}</th></tr></thead><tbody>${KW[k].map(o=>`<tr><td>${esc(o[L])}</td><td class="num">${o[0]}</td></tr>`).join('')}</tbody></table>`;
+  const cls=[['> 400',0],['200 – 400',1],['70 – 200',2],['20 – 70',3],['≤ 20',4]].map(c=>`<tr><td class="num" style="white-space:nowrap">${c[0]}</td><td>${esc(t('kwClass')[c[1]])}</td></tr>`).join('');
+  return `<div class="kwgrid">${col('W')}${col('B')}${col('E')}<table class="list"><thead><tr><th class="num">R</th><th>${t('kwClassH')}</th></tr></thead><tbody>${cls}</tbody></table></div>`;}
+function vSettings(){
+  const areas=state.taxonomy.blocks.map(b=>`<label class="f"><span>${t(b.key)}</span><textarea data-tax="${b.key}" spellcheck="false">${esc(taxText(b))}</textarea></label>`).join('');
+  return `<div class="stack">
+   <div class="row"><h1 class="grow">${t('settings')}</h1></div>
+   <h2>${t('langTitle')}</h2><div class="seg"><button data-lang="en" class="${state.lang==='en'?'on':''}">English</button><button data-lang="nl" class="${state.lang==='nl'?'on':''}">Nederlands</button></div>
+   <h2>${t('dataTitle')}</h2><div class="row"><button data-export-all>${t('exportAll')}</button><button id="importBtn">${t('importFile')}</button><span class="small muted">${t('storage')}</span></div>
+   <h2>${t('kw')}</h2>${kwTable()}
+   <h2>${t('lists')}</h2><div class="help">${t('listsHelp')}</div>
+   <div class="tax">${areas}</div>
+   <div class="row"><button class="primary" id="saveTax">${t('saveLists')}</button><button id="resetTax">${t('resetLists')}</button></div>
+  </div>`;
+}
+
+/* ---------- taxonomy editing ---------- */
+function parseTax(key,text,old){
+  const oldItems=old.items.filter(i=>!i.t);const used=new Set();
+  const byEn=new Map();oldItems.forEach(i=>{if(!byEn.has(i.en))byEn.set(i.en,i);});
+  let maxN=0;oldItems.forEach(i=>{const n=parseInt(i.id.split('.')[1]);if(n>maxN)maxN=n;});
+  const items=[];let pos=0;
+  for(let line of text.split('\n')){line=line.trim();if(!line)continue;
+    if(line.startsWith('#')){const [en,nl]=line.slice(1).split('|').map(s=>s.trim());items.push({t:'g',en,nl:nl||en});continue;}
+    const [en,nl]=line.split('|').map(s=>s.trim());
+    let o=byEn.get(en);if(o&&used.has(o.id))o=null;
+    if(!o){const cand=oldItems[pos];if(cand&&!used.has(cand.id)&&!byEnPending(byEn,cand,text))o=cand;}
+    const id=o?o.id:key+'.'+(++maxN);used.add(id);
+    items.push({id,en,nl:nl||en});pos++;}
+  return {key,items};
+}
+// an old item whose EN text still appears later in the text should not be consumed by position
+function byEnPending(byEn,cand,text){return text.split('\n').some(l=>l.trim().split('|')[0].trim()===cand.en);}
+function saveTax(){
+  const blocks=state.taxonomy.blocks.map(b=>parseTax(b.key,document.querySelector(`[data-tax="${b.key}"]`).value,b));
+  state.taxonomy={ver:2,blocks};save();toast(t('listsSaved'));render();
+}
+
+/* ---------- import / export ---------- */
+function download(name,obj){const blob=new Blob([JSON.stringify(obj,null,1)],{type:'application/json'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}
+const slug=s=>(s||'export').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
+function exportAll(){download(`soat-all-${today().replace(/-/g,'')}.json`,{app:'soat-scat',v:1,exportedAt:new Date().toISOString(),taxonomy:state.taxonomy,projects:state.projects});}
+function exportProject(p){download(`soat-${slug(p.name)}-${today().replace(/-/g,'')}.json`,{app:'soat-scat',v:1,exportedAt:new Date().toISOString(),taxonomy:state.taxonomy,projects:[p]});}
+function importJSON(text){
+  let d;try{d=JSON.parse(text);}catch(e){toast(t('importErr'));return;}
+  if(!d||d.app!=='soat-scat'||!Array.isArray(d.projects)){toast(t('importErr'));return;}
+  let n=0;
+  for(const p of d.projects){if(!p.id||!p.analyses)continue;
+    const i=state.projects.findIndex(x=>x.id===p.id);
+    if(i>=0){if(!confirm(t('replaceProject',{n:p.name})))continue;state.projects[i]=p;}else state.projects.push(p);n++;}
+  if(d.taxonomy&&JSON.stringify(d.taxonomy)!==JSON.stringify(state.taxonomy)&&confirm(t('replaceTax')))state.taxonomy=d.taxonomy;
+  save();toast(t('imported',{p:n}));render();
+}
+
+/* ---------- mutations ---------- */
+function touch(){const p=proj();if(p)p.updated=new Date().toISOString();}
+function newAnalysis(p){const a={id:uid(),date:today(),site:p.site||'',analyst:'',sev:0,status:'draft',description:'',lossDesc:'',conclusions:'',marks:{}};p.analyses.push(a);touch();save();return a;}
+function setMark(id,patch){const a=ana();const m={...mark(a,id),...patch};if(m.s===0&&!(m.c&&m.c.trim()))delete a.marks[id];else a.marks[id]=m;touch();save();}
+function updateRow(id){const a=ana();const m=mark(a,id);const el=document.querySelector(`.item[data-id="${id}"]`);if(!el)return;
+  el.className=`item s${m.s} ${m.c&&m.c.trim()?'hc':''}`;el.querySelector('.st').textContent=GL[m.s];el.setAttribute('aria-pressed',m.s===1);
+  const step=state.ui.step,c=blockCounts(a,step);const rb=document.querySelector(`.rail [data-step="${step}"] .cnt`);if(rb)rb.innerHTML=`<b>${c.m}</b>${c.c?' ✎'+c.c:''}<span class="muted">/${c.tot}</span>`;
+  const bh=document.querySelector('.blockhead .muted');if(bh)bh.textContent=`${c.m} ${t('marked')} / ${c.tot}`;}
+function cycle(id){const s=mark(ana(),id).s;setMark(id,{s:s?0:1});updateRow(id);}
+function toggleComment(id,open){const w=document.querySelector(`[data-cw="${id}"]`);if(!w)return;const show=open??w.classList.contains('hidden');w.classList.toggle('hidden',!show);state.ui.openC=show?id:null;if(show){const ta=w.querySelector('textarea');ta.focus();ta.selectionStart=ta.value.length;}}
+
+/* ---------- events ---------- */
+const app=document.getElementById('app');
+document.body.addEventListener('click',e=>{
+  const b=e.target.closest('[data-go],[data-lang],[data-step],[data-rep],[data-open-p],[data-del-p],[data-open-a],[data-rep-a],[data-dup-a],[data-del-a],[data-export-p],[data-export-all],#newAna,#importBtn,#saveTax,#resetTax,.item,.cb');
+  if(!b)return;const d=b.dataset;
+  if(b.classList.contains('cb')){e.stopPropagation();toggleComment(d.c);return;}
+  if(b.classList.contains('item')){cycle(d.id);b.focus();return;}
+  if(d.lang){state.lang=d.lang;save();render();return;}
+  if(d.go){if(d.go==='report')state.ui.openC=null;go(d.go);return;}
+  if(d.step){state.ui.step=d.step;state.ui.openC=null;save();render();return;}
+  if(d.rep){state.ui.report=d.rep;save();render();return;}
+  if(d.openP){go('project',{pid:d.openP,aid:null});return;}
+  if(d.delP){if(confirm(t('confirmDel'))){state.projects=state.projects.filter(p=>p.id!==d.delP);save();render();}return;}
+  if(d.openA){go('analysis',{aid:d.openA,step:'details'});return;}
+  if(d.repA){go('report',{aid:d.repA});return;}
+  if(d.dupA){const p=proj();const src=p.analyses.find(a=>a.id===d.dupA);const c=JSON.parse(JSON.stringify(src));c.id=uid();c.date=today();c.status='draft';p.analyses.push(c);touch();save();render();return;}
+  if(d.delA){if(confirm(t('confirmDel'))){const p=proj();p.analyses=p.analyses.filter(a=>a.id!==d.delA);touch();save();render();}return;}
+  if(d.exportP){exportProject(state.projects.find(p=>p.id===d.exportP));return;}
+  if(d.exportAll!==undefined){exportAll();return;}
+  if(b.id==='newAna'){const a=newAnalysis(proj());go('analysis',{aid:a.id,step:'details'});return;}
+  if(b.id==='importBtn'){document.getElementById('importFile').click();return;}
+  if(b.id==='saveTax'){saveTax();return;}
+  if(b.id==='resetTax'){if(confirm(t('confirmReset'))){state.taxonomy=starterTaxonomy();save();render();toast(t('listsSaved'));}return;}
+});
+app.addEventListener('submit',e=>{if(e.target.id==='newProj'){e.preventDefault();const f=new FormData(e.target);const p={id:uid(),name:f.get('name').trim(),site:(f.get('site')||'').trim(),created:new Date().toISOString(),updated:new Date().toISOString(),analyses:[]};if(!p.name)return;state.projects.push(p);go('project',{pid:p.id,aid:null});}});
+app.addEventListener('input',e=>{const el=e.target;
+  if(el.dataset.f){const a=ana();if(!a)return;a[el.dataset.f]=/^(sev|kw[WBE])$/.test(el.dataset.f)?+el.value:el.value;touch();save();const o=document.getElementById('kwOut');if(o)o.textContent=kwText(a);return;}
+  if(el.dataset.cm){setMark(el.dataset.cm,{c:el.value});updateRow(el.dataset.cm);return;}
+});
+app.addEventListener('change',e=>{if(e.target.dataset.f){const a=ana();if(a){a[e.target.dataset.f]=/^(sev|kw[WBE])$/.test(e.target.dataset.f)?+e.target.value:e.target.value;touch();save();const o=document.getElementById('kwOut');if(o)o.textContent=kwText(a);}}});
+document.getElementById('importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(importJSON);e.target.value='';});
+app.addEventListener('keydown',e=>{
+  const el=e.target;
+  if(el.dataset.cm){if(e.key==='Escape'){e.preventDefault();toggleComment(el.dataset.cm,false);document.querySelector(`.item[data-id="${el.dataset.cm}"]`)?.focus();}return;}
+  if(!el.classList.contains('item'))return;
+  const id=el.dataset.id;const rows=[...document.querySelectorAll('.item')];const i=rows.indexOf(el);
+  const k=e.key;
+  if(k==='ArrowDown'||k==='j'){e.preventDefault();rows[Math.min(i+1,rows.length-1)]?.focus();rows[Math.min(i+1,rows.length-1)]?.scrollIntoView({block:'nearest'});}
+  else if(k==='ArrowUp'||k==='k'){e.preventDefault();rows[Math.max(i-1,0)]?.focus();rows[Math.max(i-1,0)]?.scrollIntoView({block:'nearest'});}
+  else if(k===' '){e.preventDefault();const s=mark(ana(),id).s;setMark(id,{s:s===1?0:1});updateRow(id);}
+  else if(k==='c'||k==='C'||k==='Enter'){e.preventDefault();toggleComment(id,true);}
+  else if(k==='Escape'){el.blur();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+  if(state.ui.view!=='analysis')return;
+  const order=['details',...BLOCKS,'conclusions'];const i=order.indexOf(state.ui.step);
+  if(e.key==='ArrowRight'||e.key===']'){if(i<order.length-1){state.ui.step=order[i+1];state.ui.openC=null;save();render();}}
+  else if(e.key==='ArrowLeft'||e.key==='['){if(i>0){state.ui.step=order[i-1];state.ui.openC=null;save();render();}}
+});
+
+/* print orientation: full report is dense and wide → landscape */
+function setPrintOrientation(){let s=document.getElementById('pp');if(!s){s=document.createElement('style');s.id='pp';document.head.appendChild(s);}
+  const land=state.ui.view==='report'&&state.ui.report==='full';s.textContent=`@page{size:A4 ${land?'landscape':'portrait'};margin:14mm 12mm}`;}
+
+render();
+</script>
+</body>
+</html>
