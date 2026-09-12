@@ -83,6 +83,12 @@ table.list tr.click:hover{background:var(--hover)}
 .item.s1 .st{color:var(--mark)}
 .item.s1 .tx{font-weight:600}
 .item.hc .cb{color:var(--note);opacity:1}
+.fld{padding:8px 8px 10px;border-bottom:1px solid var(--line)}
+.fld .opts{display:flex;flex-wrap:wrap;gap:6px 18px;padding:4px 0}
+.fld .opts label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.fld .opts input{width:auto}
+.kwf{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+.kwf label.f>span{margin-top:6px}
 .cmt{padding:4px 8px 10px 44px;border-bottom:1px solid var(--line);background:var(--note-bg)}
 .cmt textarea{min-height:52px}
 .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px}
@@ -104,6 +110,7 @@ table.rt td.c{width:40%;white-space:pre-wrap;color:#333}
 table.rt tr.s1 td.st{color:var(--mark)}
 table.rt tr.s1 td.tx{font-weight:600}
 table.rt tr.s0 td{color:var(--na)}
+table.rt tr.fr td.c{color:var(--ink)}
 table.rt.dense td{padding:1px 5px;line-height:1.3}
 .rp .none{padding:6px;color:var(--muted);font-style:italic}
 .rp .concl{white-space:pre-wrap;border:1px solid var(--line);padding:10px 12px;border-radius:6px}
@@ -124,7 +131,7 @@ table.rt.dense td{padding:1px 5px;line-height:1.3}
   .rail button.rb{width:auto;padding:6px 10px;gap:6px}
   .rail hr{display:none}
   .rail .go{width:auto;margin:0}
-  .grid2{grid-template-columns:1fr}
+  .grid2,.kwf{grid-template-columns:1fr}
   .keys{display:none}
   main{padding:10px}
 }
@@ -162,7 +169,7 @@ en:{
  appName:'SOAT / SCAT', projects:'Projects', newProject:'New project', projectName:'Project name', site:'Site / department',
  analyses:'Analyses', newAnalysis:'New analysis', report:'Report', summary:'Project summary', del:'Delete',
  confirmDel:'Delete permanently? This cannot be undone.', back:'Back', details:'Details', date:'Date',
- description:'What happened', lossDesc:'Actual loss', analyst:'Analyst', status:'Status', draft:'Draft', final:'Final',
+ analyst:'Analyst', status:'Status', draft:'Draft', final:'Final',
  conclusions:'Conclusions and actions', exceptions:'Deviations only', full:'All items', print:'Print / PDF',
  settings:'Settings', questionnaires:'Questionnaires', questionnaire:'Questionnaire', addQ:'Add questionnaire', restoreSoat:'Restore SOAT starter',
  confirmRestore:'Replace the SOAT questionnaire with the built-in starter? Marks on items that no longer exist will show as removed.',
@@ -172,9 +179,9 @@ en:{
  keys:'↑ ↓ move · space = applies / not applicable · C = comment · Esc = close comment · ← → block',
  noProjects:'No projects yet. Create one to start analysing.', noAnalyses:'No analyses in this project yet.',
  noDev:'No deviations recorded in this block.', removed:'Removed items', removedOne:'(removed item)', updated:'Updated', duplicate:'Duplicate',
- timesMarked:'Times marked', acrossN:'across {n} analyses', descPh:'Short factual description of the event', lossPh:'Injury, damage, downtime, release…',
+ timesMarked:'Times marked', acrossN:'across {n} analyses', filled:'filled', title:'Description',
  conclPh:'Findings, root causes summarised, actions with owner and due date…',
- qHelp:'One line per item as <code>English | Nederlands</code> (leave the Dutch part empty to reuse the English text). <code>#</code> starts a block (one screen in the analysis, one section in the report), <code>##</code> a heading, <code>###</code> a subheading, and so on. Any other line is a question. Renamed lines keep their marks; removed lines show as removed in reports.',
+ qHelp:'One line per item as <code>English | Nederlands</code> (leave the Dutch part empty to reuse the English text). <code>#</code> starts a block (one screen in the analysis, one section in the report), <code>##</code> a heading, <code>###</code> a subheading, and so on. Any other line is a checkbox item. Add a type tag at the end of a line for a form field: <code>[text]</code>, <code>[textarea]</code>, <code>[date]</code>, <code>[number]</code>, <code>[select]</code> (one choice), <code>[multi]</code> (several choices) or <code>[kinney]</code> (W × B × E with live score). Under a select or multi line, list the options one per line starting with <code>- </code>. Renamed lines keep their data; removed lines show as removed in reports.',
  imported:'Imported {p} project(s)', importErr:'Could not read this file: not a valid export.', replaceProject:'Project "{n}" already exists. Replace it? Cancel keeps the existing one.',
  replaceQ:'The file contains questionnaire "{n}" with different content. Replace yours with it?', saved:'Saved',
  legend:'● applies   – not applicable', reportedOn:'Printed', marked:'marked', untitled:'Untitled', deviations:'Deviations',
@@ -187,7 +194,7 @@ nl:{
  appName:'SOAT / SCAT', projects:'Projecten', newProject:'Nieuw project', projectName:'Projectnaam', site:'Locatie / afdeling',
  analyses:'Analyses', newAnalysis:'Nieuwe analyse', report:'Rapport', summary:'Projectoverzicht', del:'Verwijderen',
  confirmDel:'Definitief verwijderen? Dit kan niet ongedaan worden gemaakt.', back:'Terug', details:'Gegevens', date:'Datum',
- description:'Wat is er gebeurd', lossDesc:'Werkelijk verlies', analyst:'Analist', status:'Status', draft:'Concept', final:'Definitief',
+ analyst:'Analist', status:'Status', draft:'Concept', final:'Definitief',
  conclusions:'Conclusies en acties', exceptions:'Alleen afwijkingen', full:'Alle items', print:'Printen / PDF',
  settings:'Instellingen', questionnaires:'Vragenlijsten', questionnaire:'Vragenlijst', addQ:'Vragenlijst toevoegen', restoreSoat:'SOAT-startset herstellen',
  confirmRestore:'De SOAT-vragenlijst vervangen door de ingebouwde startset? Markeringen op items die niet meer bestaan worden als verwijderd getoond.',
@@ -197,9 +204,9 @@ nl:{
  keys:'↑ ↓ verplaatsen · spatie = van toepassing / n.v.t. · C = opmerking · Esc = opmerking sluiten · ← → blok',
  noProjects:'Nog geen projecten. Maak er een aan om te beginnen.', noAnalyses:'Nog geen analyses in dit project.',
  noDev:'Geen afwijkingen vastgelegd in dit blok.', removed:'Verwijderde items', removedOne:'(verwijderd item)', updated:'Bijgewerkt', duplicate:'Dupliceren',
- timesMarked:'Aantal keer gemarkeerd', acrossN:'over {n} analyses', descPh:'Korte feitelijke beschrijving van de gebeurtenis', lossPh:'Letsel, schade, stilstand, emissie…',
+ timesMarked:'Aantal keer gemarkeerd', acrossN:'over {n} analyses', filled:'ingevuld', title:'Omschrijving',
  conclPh:'Bevindingen, samenvatting basisoorzaken, acties met eigenaar en datum…',
- qHelp:'Eén regel per item als <code>English | Nederlands</code> (laat het Nederlandse deel leeg om de Engelse tekst te hergebruiken). <code>#</code> start een blok (één scherm in de analyse, één sectie in het rapport), <code>##</code> een kop, <code>###</code> een subkop, enzovoort. Elke andere regel is een vraag. Hernoemde regels behouden hun markeringen; verwijderde regels worden in rapporten als verwijderd getoond.',
+ qHelp:'Eén regel per item als <code>English | Nederlands</code> (laat het Nederlandse deel leeg om de Engelse tekst te hergebruiken). <code>#</code> start een blok (één scherm in de analyse, één sectie in het rapport), <code>##</code> een kop, <code>###</code> een subkop, enzovoort. Elke andere regel is een aanvinkitem. Zet een typelabel aan het einde van een regel voor een invulveld: <code>[text]</code>, <code>[textarea]</code>, <code>[date]</code>, <code>[number]</code>, <code>[select]</code> (één keuze), <code>[multi]</code> (meerdere keuzes) of <code>[kinney]</code> (W × B × E met live score). Zet onder een select- of multi-regel de opties elk op een eigen regel die begint met <code>- </code>. Hernoemde regels behouden hun gegevens; verwijderde regels worden in rapporten als verwijderd getoond.',
  imported:'{p} project(en) geïmporteerd', importErr:'Bestand kon niet worden gelezen: geen geldige export.', replaceProject:'Project "{n}" bestaat al. Vervangen? Annuleren behoudt het bestaande project.',
  replaceQ:'Het bestand bevat vragenlijst "{n}" met andere inhoud. De jouwe hiermee vervangen?', saved:'Opgeslagen',
  legend:'● van toepassing   – niet van toepassing', reportedOn:'Afgedrukt', marked:'gemarkeerd', untitled:'Zonder titel', deviations:'Afwijkingen',
@@ -226,18 +233,30 @@ function parseQ(text,old){
     if(m){const lvl=m[1].length;const [en,nl]=m[2].split('|').map(s=>s.trim());
       if(lvl===1){cur={title:{en,nl:nl||en},items:[]};blocks.push(cur);}
       else{ensure();cur.items.push({t:'g',lvl,en,nl:nl||en});}continue;}
-    ensure();const [en,nl]=line.split('|').map(s=>s.trim());
+    ensure();
+    const om=line.match(/^-\s+(.*)$/);const last=cur.items[cur.items.length-1];
+    if(om&&last&&!last.t&&(last.f==='select'||last.f==='multi')){const [oe,on]=om[1].split('|').map(s=>s.trim());last.opts.push({en:oe,nl:on||oe});continue;}
+    let f=null;const fm=line.match(/^(.*?)\s*\[(text|textarea|date|number|select|multi|kinney)\]\s*$/i);if(fm){f=fm[2].toLowerCase();line=fm[1];}
+    const [en,nl]=line.split('|').map(s=>s.trim());
     let o=byEn.get(en);if(o&&used.has(o.id))o=null;
     if(!o){const cand=oldItems[pos];if(cand&&!used.has(cand.id)&&!enLater.has(cand.en))o=cand;}
     const id=o?o.id:qid+'.'+(++maxN);used.add(id);
-    cur.items.push({id,en,nl:nl||en});pos++;}
+    const it={id,en,nl:nl||en};if(f){it.f=f;if(f==='select'||f==='multi')it.opts=[];}cur.items.push(it);pos++;}
   return {id:qid,name:(old&&old.name)||'',blocks};
 }
-function qText(q){return q.blocks.map(b=>`# ${b.title.en}${b.title.nl&&b.title.nl!==b.title.en?' | '+b.title.nl:''}\n`+b.items.map(it=>(it.t?'#'.repeat(it.lvl)+' ':'')+it.en+(it.nl&&it.nl!==it.en?' | '+it.nl:'')).join('\n')).join('\n\n');}
+const enl=it=>it.en+(it.nl&&it.nl!==it.en?' | '+it.nl:'');
+function qText(q){return q.blocks.map(b=>`# ${b.title.en}${b.title.nl&&b.title.nl!==b.title.en?' | '+b.title.nl:''}\n`+b.items.map(it=>it.t?'#'.repeat(it.lvl)+' '+enl(it):enl(it)+(it.f?' ['+it.f+']':'')+(it.opts?it.opts.map(o=>'\n- '+enl(o)).join(''):'')).join('\n')).join('\n\n');}
+const isField=it=>!it.t&&!!it.f;
+function qFields(q){return qItems(q).filter(isField);}
 function qItems(q){const out=[];q.blocks.forEach(b=>b.items.forEach(i=>{if(!i.t)out.push(i);}));return out;}
 
 /* ---------- built-in SOAT questionnaire (Aviko SOAT v2.0 lists; control block = generic ILCI management elements) ---------- */
-const SOAT_TEXT=`# Loss | Verlies
+const SOAT_TEXT=`# Incident | Incident
+What happened | Wat is er gebeurd [textarea]
+Actual loss | Werkelijk verlies [textarea]
+Risk | Risico [kinney]
+
+# Loss | Verlies
 ## Type of loss | Soort verlies
 People (safety and health) | Personen (Veiligheid en Gezondheid)
 Installations / equipment (damage) | Installaties/Uitrusting (Schade)
@@ -548,14 +567,16 @@ const KW={
  W:[[10,'Expected','Te verwachten'],[6,'Quite possible','Zeer wel mogelijk'],[3,'Unusual','Ongewoon'],[1,'Unlikely, but possible in borderline case','Onwaarschijnlijk, maar mogelijk in grensgeval'],[0.3,'Conceivable, but unlikely','Denkbaar, maar onwaarschijnlijk'],[0.2,'Practically impossible','Praktisch onmogelijk'],[0.1,'Virtually inconceivable','Bijna niet denkbaar']],
  B:[[10,'Continuous','Voortdurend'],[6,'Regularly (daily)','Regelmatig (dagelijks)'],[3,'Occasionally (weekly)','Af en toe (wekelijks)'],[2,'Sometimes (monthly)','Soms (maandelijks)'],[1,'Rarely (yearly)','Zelden (jaarlijks)'],[0.5,'Very rarely','Zeer zelden']],
  E:[[40,'Disaster: several fatalities (acute or delayed)','Ramp: enkele doden (acuut of op termijn)'],[15,'Very serious: one fatality (acute or delayed)','Zeer ernstig: een dode (acuut of op termijn)'],[7,'Serious: irreversible effect (disability)','Ernstig: irreversibel effect (invaliditeit)'],[3,'Significant: injury with lost time','Belangrijk: letsel en verzuim'],[1,'Minor: injury without lost time (first aid) or nuisance','Gering: letsel zonder verzuim (EHBO) of hinder']]};
-function kwScore(a){if(!a.kwW||!a.kwB||!a.kwE)return null;const r=a.kwW*a.kwB*a.kwE;const cls=r>400?0:r>200?1:r>70?2:r>20?3:4;return {r:Math.round(r*10)/10,cls};}
-function kwText(a){const k=kwScore(a);return k?`${a.kwW} × ${a.kwB} × ${a.kwE} = ${k.r} · ${t('kwClass')[k.cls]}`:t('kwNone');}
+function kwVal(a){const f=qFields(qOf(a)).find(i=>i.f==='kinney');return f?(a.vals[f.id]||{}):null;}
+function kwScoreV(v){if(!v||!v.w||!v.b||!v.e)return null;const r=v.w*v.b*v.e;const cls=r>400?0:r>200?1:r>70?2:r>20?3:4;return {r:Math.round(r*10)/10,cls};}
+function kwScore(a){return kwScoreV(kwVal(a));}
+function kwTextV(v){const k=kwScoreV(v);return k?`${v.w} × ${v.b} × ${v.e} = ${k.r} · ${t('kwClass')[k.cls]}`:t('kwNone');}
 
 /* ---------- state ---------- */
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
 const today=()=>new Date().toISOString().slice(0,10);
-function fresh(){return {v:2,lang:'en',questionnaires:[],projects:[],ui:{view:'projects',pid:null,aid:null,step:'details',report:'exc'}};}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&(s.v===1||s.v===2))return s;}catch(e){}return null;}
+function fresh(){return {v:3,lang:'en',questionnaires:[],projects:[],ui:{view:'projects',pid:null,aid:null,step:'details',report:'exc'}};}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.v>=1&&s.v<=3)return s;}catch(e){}return null;}
 let state=load()||fresh();
 migrate();
 function migrate(){
@@ -567,7 +588,18 @@ function migrate(){
     for(const p of state.projects)for(const a of p.analyses){a.qid='soat';delete a.sev;for(const id in a.marks)if(a.marks[id].s===2)a.marks[id].s=0;}
     state.v=2;state.ui.step='details';
   }
+  if(state.v===2){ // v2 → v3: description / loss / K&W move into an Incident form block at the start of every questionnaire
+    for(const q of state.questionnaires){
+      let maxN=0;qItems(q).forEach(i=>{const n=parseInt(String(i.id).split('.').pop());if(n>maxN)maxN=n;});
+      const ids=[q.id+'.'+(maxN+1),q.id+'.'+(maxN+2),q.id+'.'+(maxN+3)];q._mig=ids;
+      q.blocks.unshift({title:{en:'Incident',nl:'Incident'},items:[{id:ids[0],en:'What happened',nl:'Wat is er gebeurd',f:'textarea'},{id:ids[1],en:'Actual loss',nl:'Werkelijk verlies',f:'textarea'},{id:ids[2],en:'Risk',nl:'Risico',f:'kinney'}]});}
+    for(const p of state.projects)for(const a of p.analyses){a.vals=a.vals||{};const q=state.questionnaires.find(x=>x.id===a.qid);
+      if(q&&q._mig){if(a.description)a.vals[q._mig[0]]=a.description;if(a.lossDesc)a.vals[q._mig[1]]=a.lossDesc;if(a.kwW||a.kwB||a.kwE)a.vals[q._mig[2]]={w:a.kwW||0,b:a.kwB||0,e:a.kwE||0};}
+      delete a.description;delete a.lossDesc;delete a.kwW;delete a.kwB;delete a.kwE;}
+    state.questionnaires.forEach(q=>delete q._mig);state.v=3;
+  }
   if(!state.questionnaires.length)state.questionnaires=[soatStarter()];
+  for(const p of state.projects)for(const a of p.analyses)a.vals=a.vals||{};
   save();
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){toast('Storage error: '+e.message);}}
@@ -584,7 +616,8 @@ function toast(msg){const el=document.getElementById('toast');el.textContent=msg
 function go(view,extra){Object.assign(state.ui,{view},extra||{});save();render();window.scrollTo(0,0);}
 
 /* ---------- counts ---------- */
-function blockCounts(a,b){let m=0,c=0,tot=0;for(const it of b.items){if(it.t)continue;tot++;const k=mark(a,it.id);if(k.s===1)m++;if(k.c&&k.c.trim())c++;}return {m,c,tot};}
+const hasVal=v=>v!==undefined&&v!==null&&v!==''&&!(Array.isArray(v)&&!v.length)&&!(typeof v==='object'&&!Array.isArray(v)&&!(v.w||v.b||v.e));
+function blockCounts(a,b){let m=0,c=0,tot=0;for(const it of b.items){if(it.t)continue;tot++;if(it.f){if(hasVal(a.vals[it.id]))m++;continue;}const k=mark(a,it.id);if(k.s===1)m++;if(k.c&&k.c.trim())c++;}return {m,c,tot};}
 function devCount(a){return Object.values(a.marks).filter(isDev).length;}
 function cntHtml(c){return `<b>${c.m}</b>${c.c?' ✎'+c.c:''}<span class="muted">/${c.tot}</span>`;}
 
@@ -596,13 +629,14 @@ function renderTop(){
   const p=proj(),a=ana();
   let crumbs=`<button class="link" data-go="projects">${t('projects')}</button>`;
   if(p&&state.ui.view!=='projects')crumbs+=`<span>›</span><button class="link" data-go="project"><b>${esc(p.name)}</b></button>`;
-  if(a&&(state.ui.view==='analysis'||state.ui.view==='report'))crumbs+=`<span>›</span><b>${esc(a.date||'')} ${esc(short(a.description)||t('untitled'))}</b>`;
+  if(a&&(state.ui.view==='analysis'||state.ui.view==='report'))crumbs+=`<span>›</span><b>${esc(a.date||'')} ${esc(short(aTitle(a))||t('untitled'))}</b>`;
   if(state.ui.view==='summary')crumbs+=`<span>›</span><b>${t('summary')}</b>`;
   if(state.ui.view==='settings')crumbs+=`<span>›</span><b>${t('settings')}</b>`;
   document.getElementById('top').innerHTML=`<div class="brand">${t('appName')}</div><div class="crumbs">${crumbs}</div>
    <div class="seg"><button data-lang="en" class="${state.lang==='en'?'on':''}">EN</button><button data-lang="nl" class="${state.lang==='nl'?'on':''}">NL</button></div>
    <button data-go="settings" title="${t('settings')}">⚙</button>`;
 }
+const aTitle=a=>{for(const f of qFields(qOf(a)))if((f.f==='text'||f.f==='textarea')&&a.vals[f.id])return String(a.vals[f.id]);return '';};
 const short=(s,n=48)=>{s=(s||'').trim().split('\n')[0];return s.length>n?s.slice(0,n-1)+'…':s;};
 
 function vProjects(){
@@ -618,13 +652,13 @@ function vProject(){
   const p=proj();if(!p)return vProjects();
   const multiQ=state.questionnaires.length>1;
   const rows=p.analyses.slice().sort((x,y)=>(y.date||'').localeCompare(x.date||'')).map(a=>{const k=kwScore(a);return `<tr class="click" data-open-a="${a.id}">
-    <td style="white-space:nowrap">${esc(a.date||'')}</td><td>${esc(short(a.description,70))||'<span class="muted">'+t('untitled')+'</span>'}</td>${multiQ?`<td>${esc(qOf(a).name)}</td>`:''}<td class="num">${k?k.r:''}</td>
+    <td style="white-space:nowrap">${esc(a.date||'')}</td><td>${esc(short(aTitle(a),70))||'<span class="muted">'+t('untitled')+'</span>'}</td>${multiQ?`<td>${esc(qOf(a).name)}</td>`:''}<td class="num">${k?k.r:''}</td>
     <td>${t(a.status||'draft')}</td><td class="num">${devCount(a)}</td>
     <td class="num" style="white-space:nowrap"><button class="link" data-rep-a="${a.id}">${t('report')}</button> <button class="link" data-dup-a="${a.id}">${t('duplicate')}</button> <button class="link danger" data-del-a="${a.id}">${t('del')}</button></td></tr>`;}).join('');
   const qsel=multiQ?`<select id="newQsel" style="width:auto">${state.questionnaires.map(q=>`<option value="${q.id}" ${q.id===p.lastQ?'selected':''}>${esc(q.name)}</option>`).join('')}</select>`:'';
   return `<div class="stack">
    <div class="row"><div class="grow"><h1>${esc(p.name)}</h1><div class="muted">${esc(p.site||'')}</div></div><button data-go="summary">${t('summary')}</button><button data-export-p="${p.id}">${t('exportProject')}</button>${qsel}<button class="primary" id="newAna">${t('newAnalysis')}</button></div>
-   ${p.analyses.length?`<table class="list"><thead><tr><th>${t('date')}</th><th>${t('description')}</th>${multiQ?`<th>${t('questionnaire')}</th>`:''}<th class="num">R</th><th>${t('status')}</th><th class="num">${t('deviations')}</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty">${t('noAnalyses')}</div>`}
+   ${p.analyses.length?`<table class="list"><thead><tr><th>${t('date')}</th><th>${t('title')}</th>${multiQ?`<th>${t('questionnaire')}</th>`:''}<th class="num">R</th><th>${t('status')}</th><th class="num">${t('deviations')}</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty">${t('noAnalyses')}</div>`}
   </div>`;
 }
 
@@ -649,11 +683,6 @@ function vDetails(a,q){
    <label class="f"><span>${t('site')}</span><input type="text" data-f="site" value="${esc(a.site||'')}"></label>
    <label class="f"><span>${t('analyst')}</span><input type="text" data-f="analyst" value="${esc(a.analyst||'')}"></label>
    <label class="f"><span>${t('status')}</span><select data-f="status"><option value="draft" ${a.status!=='final'?'selected':''}>${t('draft')}</option><option value="final" ${a.status==='final'?'selected':''}>${t('final')}</option></select></label>
-   <label class="f span"><span>${t('description')}</span><textarea data-f="description" placeholder="${t('descPh')}">${esc(a.description||'')}</textarea></label>
-   <label class="f span"><span>${t('lossDesc')}</span><textarea data-f="lossDesc" placeholder="${t('lossPh')}">${esc(a.lossDesc||'')}</textarea></label>
-   <h3 class="span" style="margin-top:6px">${t('kw')}</h3>
-   ${['W','B','E'].map(k=>`<label class="f"><span>${t('kw'+k)}</span><select data-f="kw${k}"><option value="0">—</option>${KW[k].map(o=>`<option value="${o[0]}" ${a['kw'+k]===o[0]?'selected':''}>${o[0]} · ${state.lang==='nl'?o[2]:o[1]}</option>`).join('')}</select></label>`).join('')}
-   <label class="f"><span>${t('kwR')}</span><div id="kwOut" style="padding:6px 0;font-weight:600">${kwText(a)}</div></label>
   </div>`;
 }
 function itemRow(a,it){
@@ -662,12 +691,24 @@ function itemRow(a,it){
     <span class="st">${GL[m.s]}</span><span class="tx">${esc(name(it))}</span><span class="cb" data-c="${it.id}" title="${t('comment')}">✎</span></div>
    <div class="cmt ${open?'':'hidden'}" data-cw="${it.id}"><textarea data-cm="${it.id}" placeholder="${t('commentPh')}">${esc(m.c||'')}</textarea></div>`;
 }
+function optLabel(it,en){const o=(it.opts||[]).find(x=>x.en===en);return o?name(o):en;}
+function valText(it,v){if(!hasVal(v))return '';if(it.f==='kinney')return kwTextV(v);if(it.f==='multi')return v.map(x=>optLabel(it,x)).join(', ');if(it.f==='select')return optLabel(it,v);return String(v);}
+function fieldRow(a,it){const v=a.vals[it.id];const id=it.id;let inp;
+  if(it.f==='text')inp=`<input type="text" data-fv="${id}" value="${esc(v||'')}">`;
+  else if(it.f==='date')inp=`<input type="date" data-fv="${id}" value="${esc(v||'')}">`;
+  else if(it.f==='number')inp=`<input type="number" data-fv="${id}" value="${esc(v??'')}" style="max-width:200px">`;
+  else if(it.f==='textarea')inp=`<textarea data-fv="${id}">${esc(v||'')}</textarea>`;
+  else if(it.f==='select')inp=`<select data-fv="${id}"><option value="">—</option>${(it.opts||[]).map(o=>`<option value="${esc(o.en)}" ${v===o.en?'selected':''}>${esc(name(o))}</option>`).join('')}</select>`;
+  else if(it.f==='multi')inp=`<div class="opts">${(it.opts||[]).map(o=>`<label><input type="checkbox" data-fmv="${id}" value="${esc(o.en)}" ${Array.isArray(v)&&v.includes(o.en)?'checked':''}> ${esc(name(o))}</label>`).join('')}</div>`;
+  else if(it.f==='kinney'){const k=v||{};inp=`<div class="kwf">${['w','b','e'].map(x=>`<label class="f"><span>${t('kw'+x.toUpperCase())}</span><select data-fk="${id}" data-k="${x}"><option value="0">—</option>${KW[x.toUpperCase()].map(o=>`<option value="${o[0]}" ${k[x]===o[0]?'selected':''}>${o[0]} · ${state.lang==='nl'?o[2]:o[1]}</option>`).join('')}</select></label>`).join('')}<label class="f"><span>${t('kwR')}</span><div class="kwout" data-kwout="${id}" style="padding:6px 0;font-weight:600">${kwTextV(k)}</div></label></div>`;}
+  return `<div class="fld"><label class="f"><span>${esc(name(it))}</span>${inp}</label></div>`;}
 function vBlock(a,b){
   const c=blockCounts(a,b);
-  const rows=b.items.map(it=>it.t?`<div class="grp l${Math.min(it.lvl,5)}">${esc(name(it))}</div>`:itemRow(a,it)).join('');
+  const rows=b.items.map(it=>it.t?`<div class="grp l${Math.min(it.lvl,5)}">${esc(name(it))}</div>`:it.f?fieldRow(a,it):itemRow(a,it)).join('');
+  const hasChecks=b.items.some(it=>!it.t&&!it.f);
   return `<div class="blockhead"><h2>${esc(name(b.title))}</h2><span class="muted" id="bcount">${c.m} ${t('marked')} / ${c.tot}</span></div>
-   <div class="keys">${t('keys')}</div><div class="items" id="items">${rows}</div>
-   <div class="legend"><i>${t('legend')}</i></div>`;
+   ${hasChecks?`<div class="keys">${t('keys')}</div>`:''}<div class="items" id="items">${rows}</div>
+   ${hasChecks?`<div class="legend"><i>${t('legend')}</i></div>`:''}`;
 }
 
 /* ---------- reports ---------- */
@@ -676,6 +717,9 @@ function reportBlock(a,b,mode){
   for(const it of b.items){
     if(it.t){const h=`<tr><td class="g l${Math.min(it.lvl,5)}" colspan="3">${esc(name(it))}</td></tr>`;
       if(mode==='full'){out+=h;}else{pending=pending.filter(p=>p.lvl<it.lvl);pending.push({lvl:it.lvl,h});}continue;}
+    if(it.f){const v=a.vals[it.id];if(mode==='exc'&&!hasVal(v))continue;
+      if(pending.length){out+=pending.map(p=>p.h).join('');pending=[];}
+      any=true;out+=`<tr class="fr"><td class="st"></td><td class="tx">${esc(name(it))}</td><td class="c">${esc(valText(it,v))||'<span class="muted">—</span>'}</td></tr>`;continue;}
     const m=mark(a,it.id);if(mode==='exc'&&!isDev(m))continue;
     if(pending.length){out+=pending.map(p=>p.h).join('');pending=[];}
     any=true;out+=`<tr class="s${m.s}"><td class="st">${GL[m.s]}</td><td class="tx">${esc(name(it))}</td><td class="c">${esc(m.c||'')}</td></tr>`;}
@@ -691,10 +735,7 @@ function rHead(a,p,q){const dev=devCount(a);return `<dl class="rhead" style="mar
      <dt>${t('date')}</dt><dd>${esc(a.date||'')}</dd>
      <dt>${t('site')}</dt><dd>${esc(a.site||p.site||'')}</dd>
      <dt>${t('analyst')}</dt><dd>${esc(a.analyst||'')}</dd>
-     <dt>${t('kw')}</dt><dd>${esc(kwText(a))}</dd>
-     <dt>${t('status')}</dt><dd>${t(a.status||'draft')} · ${dev} ${t('deviations').toLowerCase()}</dd>
-     <dt>${t('description')}</dt><dd class="wide">${esc(a.description||'')}</dd>
-     <dt>${t('lossDesc')}</dt><dd class="wide">${esc(a.lossDesc||'')}</dd></dl>`;}
+     <dt>${t('status')}</dt><dd>${t(a.status||'draft')} · ${dev} ${t('deviations').toLowerCase()}</dd></dl>`;}
 function vReport(){
   const a=ana(),p=proj();if(!a)return vProject();const q=qOf(a);const mode=state.ui.report;
   return `<div class="row noprint" style="margin-bottom:14px"><button data-go="analysis">← ${t('back')}</button><div class="grow"></div>
@@ -710,10 +751,13 @@ function vReport(){
 function vSummary(){
   const p=proj();if(!p)return vProjects();
   const n=p.analyses.length;const counts={};
-  for(const a of p.analyses)for(const id in a.marks)if(a.marks[id].s===1)counts[id]=(counts[id]||0)+1;
+  for(const a of p.analyses){for(const id in a.marks)if(a.marks[id].s===1)counts[id]=(counts[id]||0)+1;
+    for(const id in a.vals){const v=a.vals[id];(Array.isArray(v)?v:typeof v==='string'?[v]:[]).forEach(x=>{counts[id+'::'+x]=(counts[id+'::'+x]||0)+1;});}}
   let body='',any=false;
   for(const q of state.questionnaires){let qb='';
-    for(const b of q.blocks){let rows='';for(const it of b.items){if(it.t)continue;const c=counts[it.id];if(!c)continue;any=true;rows+=`<tr><td class="num" style="width:60px">${c}</td><td>${esc(name(it))}</td></tr>`;}
+    for(const b of q.blocks){let rows='';for(const it of b.items){if(it.t)continue;
+        if(it.f){if(it.f!=='select'&&it.f!=='multi')continue;for(const o of it.opts||[]){const c=counts[it.id+'::'+o.en];if(!c)continue;any=true;rows+=`<tr><td class="num" style="width:60px">${c}</td><td>${esc(name(it))} · ${esc(name(o))}</td></tr>`;}continue;}
+        const c=counts[it.id];if(!c)continue;any=true;rows+=`<tr><td class="num" style="width:60px">${c}</td><td>${esc(name(it))}</td></tr>`;}
       if(rows)qb+=`<div class="blk"><h2>${esc(name(b.title))}</h2><table class="rt dense">${rows}</table></div>`;}
     if(qb)body+=(state.questionnaires.length>1?`<h1 style="margin-top:22px">${esc(q.name)}</h1>`:'')+qb;}
   return `<div class="row noprint" style="margin-bottom:14px"><button data-go="project">← ${t('back')}</button><div class="grow"></div><button class="primary" onclick="window.print()">${t('print')}</button></div>
@@ -751,13 +795,13 @@ function saveQ(id){const i=state.questionnaires.findIndex(q=>q.id===id);if(i<0)r
 function download(fname,obj){const blob=new Blob([JSON.stringify(obj,null,1)],{type:'application/json'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=fname;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}
 const slug=s=>(s||'export').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
 const stamp=()=>today().replace(/-/g,'');
-function exportAll(){download(`soat-all-${stamp()}.json`,{app:'soat-scat',v:2,exportedAt:new Date().toISOString(),questionnaires:state.questionnaires,projects:state.projects});}
-function exportProject(p){const used=new Set(p.analyses.map(a=>a.qid));download(`soat-${slug(p.name)}-${stamp()}.json`,{app:'soat-scat',v:2,exportedAt:new Date().toISOString(),questionnaires:state.questionnaires.filter(q=>used.has(q.id)),projects:[p]});}
+function exportAll(){download(`soat-all-${stamp()}.json`,{app:'soat-scat',v:3,exportedAt:new Date().toISOString(),questionnaires:state.questionnaires,projects:state.projects});}
+function exportProject(p){const used=new Set(p.analyses.map(a=>a.qid));download(`soat-${slug(p.name)}-${stamp()}.json`,{app:'soat-scat',v:3,exportedAt:new Date().toISOString(),questionnaires:state.questionnaires.filter(q=>used.has(q.id)),projects:[p]});}
 function importJSON(text){
   let d;try{d=JSON.parse(text);}catch(e){toast(t('importErr'));return;}
   if(!d||d.app!=='soat-scat'||!Array.isArray(d.projects)){toast(t('importErr'));return;}
-  if(d.v===1){ // convert a v1 export in place using the same migration
-    const s=state;state={v:1,lang:s.lang,taxonomy:d.taxonomy,projects:d.projects,ui:s.ui};migrate();d={questionnaires:state.questionnaires,projects:state.projects};state=s;}
+  if(d.v===1||d.v===2){ // convert an older export in place using the same migration
+    const s=state;state={v:d.v,lang:s.lang,taxonomy:d.taxonomy,questionnaires:d.questionnaires||[],projects:d.projects,ui:s.ui};migrate();d={questionnaires:state.questionnaires,projects:state.projects};state=s;}
   let n=0;
   for(const q of d.questionnaires||[]){const i=state.questionnaires.findIndex(x=>x.id===q.id);
     if(i<0)state.questionnaires.push(q);else if(JSON.stringify(state.questionnaires[i])!==JSON.stringify(q)&&confirm(t('replaceQ',{n:q.name})))state.questionnaires[i]=q;}
@@ -769,7 +813,7 @@ function importJSON(text){
 
 /* ---------- mutations ---------- */
 function touch(){const p=proj();if(p)p.updated=new Date().toISOString();}
-function newAnalysis(p,qid){const a={id:uid(),qid,date:today(),site:p.site||'',analyst:'',kwW:0,kwB:0,kwE:0,status:'draft',description:'',lossDesc:'',conclusions:'',marks:{}};p.analyses.push(a);p.lastQ=qid;touch();save();return a;}
+function newAnalysis(p,qid){const a={id:uid(),qid,date:today(),site:p.site||'',analyst:'',status:'draft',conclusions:'',marks:{},vals:{}};p.analyses.push(a);p.lastQ=qid;touch();save();return a;}
 function setMark(id,patch){const a=ana();const m={...mark(a,id),...patch};if(m.s===0&&!(m.c&&m.c.trim()))delete a.marks[id];else a.marks[id]=m;touch();save();}
 function updateRow(id){const a=ana();const m=mark(a,id);const el=document.querySelector(`.item[data-id="${id}"]`);if(!el)return;
   el.className=`item s${m.s} ${m.c&&m.c.trim()?'hc':''}`;el.querySelector('.st').textContent=GL[m.s];el.setAttribute('aria-pressed',m.s===1);
@@ -795,7 +839,7 @@ document.body.addEventListener('click',e=>{
   if(d.delP){if(confirm(t('confirmDel'))){state.projects=state.projects.filter(p=>p.id!==d.delP);save();render();}return;}
   if(d.openA){go('analysis',{aid:d.openA,step:'details'});return;}
   if(d.repA){go('report',{aid:d.repA});return;}
-  if(d.dupA){const p=proj();const src=p.analyses.find(a=>a.id===d.dupA);const c=JSON.parse(JSON.stringify(src));c.id=uid();c.date=today();c.status='draft';p.analyses.push(c);touch();save();render();return;}
+  if(d.dupA){const p=proj();const src=p.analyses.find(a=>a.id===d.dupA);const c=JSON.parse(JSON.stringify(src));c.id=uid();c.date=today();c.status='draft';c.vals=c.vals||{};p.analyses.push(c);touch();save();render();return;}
   if(d.delA){if(confirm(t('confirmDel'))){const p=proj();p.analyses=p.analyses.filter(a=>a.id!==d.delA);touch();save();render();}return;}
   if(d.exportP){exportProject(state.projects.find(p=>p.id===d.exportP));return;}
   if(d.exportAll!==undefined){exportAll();return;}
@@ -807,9 +851,17 @@ document.body.addEventListener('click',e=>{
   if(b.id==='importBtn'){document.getElementById('importFile').click();return;}
 });
 app.addEventListener('submit',e=>{if(e.target.id==='newProj'){e.preventDefault();const f=new FormData(e.target);const p={id:uid(),name:f.get('name').trim(),site:(f.get('site')||'').trim(),created:new Date().toISOString(),updated:new Date().toISOString(),analyses:[]};if(!p.name)return;state.projects.push(p);go('project',{pid:p.id,aid:null});}});
-function setField(el){const a=ana();if(!a)return;const f=el.dataset.f;a[f]=/^kw[WBE]$/.test(f)?+el.value:el.value;touch();save();const o=document.getElementById('kwOut');if(o)o.textContent=kwText(a);}
-app.addEventListener('input',e=>{const el=e.target;if(el.dataset.f){setField(el);return;}if(el.dataset.cm){setMark(el.dataset.cm,{c:el.value});updateRow(el.dataset.cm);}});
-app.addEventListener('change',e=>{if(e.target.dataset.f)setField(e.target);});
+function setField(el){const a=ana();if(!a)return;a[el.dataset.f]=el.value;touch();save();}
+function setVal(id,v){const a=ana();if(!a)return;if(hasVal(v))a.vals[id]=v;else delete a.vals[id];touch();save();
+  const b=qOf(a).blocks[+state.ui.step.slice(1)];if(!b)return;const c=blockCounts(a,b);const rb=document.querySelector(`.rail [data-step="${state.ui.step}"] .cnt`);if(rb)rb.innerHTML=cntHtml(c);const bh=document.getElementById('bcount');if(bh)bh.textContent=`${c.m} ${t('marked')} / ${c.tot}`;}
+function fieldEvent(e){const el=e.target,d=el.dataset;const a=ana();if(!a)return false;
+  if(d.f){setField(el);return true;}
+  if(d.fv){setVal(d.fv,el.type==='number'?(el.value===''?'':+el.value):el.value);return true;}
+  if(d.fmv){const cur=[...document.querySelectorAll(`[data-fmv="${d.fmv}"]:checked`)].map(x=>x.value);setVal(d.fmv,cur);return true;}
+  if(d.fk){const v={...(a.vals[d.fk]||{})};v[d.k]=+el.value;setVal(d.fk,v);const o=document.querySelector(`[data-kwout="${d.fk}"]`);if(o)o.textContent=kwTextV(v);return true;}
+  return false;}
+app.addEventListener('input',e=>{if(fieldEvent(e))return;const el=e.target;if(el.dataset.cm){setMark(el.dataset.cm,{c:el.value});updateRow(el.dataset.cm);}});
+app.addEventListener('change',fieldEvent);
 document.getElementById('importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(importJSON);e.target.value='';});
 app.addEventListener('keydown',e=>{
   const el=e.target;
