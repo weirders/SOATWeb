@@ -159,9 +159,12 @@ table.rt.dense td{padding:1px 5px;line-height:1.3}
 <div class="toast" id="toast"></div>
 <input type="file" id="importFile" accept="application/json,.json" class="hidden">
 
+<script src="https://weirders.github.io/ToolDeck/sync.v1.js"></script>
 <script>
 'use strict';
 const KEY='soat_scat_v1';
+const APP='soat';
+const SYNC=window.SfhaSync||null; // absent → standalone mode, localStorage only
 
 /* ---------- i18n ---------- */
 const I18N={
@@ -179,7 +182,7 @@ en:{
  keys:'↑ ↓ move · space = applies / not applicable · C = comment · Esc = close comment · ← → block',
  noProjects:'No projects yet. Create one to start analysing.', noAnalyses:'No analyses in this project yet.',
  noDev:'No deviations recorded in this block.', removed:'Removed items', removedOne:'(removed item)', updated:'Updated', duplicate:'Duplicate',
- timesMarked:'Times marked', acrossN:'across {n} analyses', filled:'filled', title:'Description',
+ timesMarked:'Times marked', acrossN:'across {n} analyses', filled:'filled', title:'Description', sync:'Sync', synced:'Synced from another device', offline:'standalone', syncSame:'Concurrent edits of the same analysis on two devices: the last save wins.',
  conclPh:'Findings, root causes summarised, actions with owner and due date…',
  qHelp:'One line per item as <code>English | Nederlands</code> (leave the Dutch part empty to reuse the English text). <code>#</code> starts a block (one screen in the analysis, one section in the report), <code>##</code> a heading, <code>###</code> a subheading, and so on. Any other line is a checkbox item. Add a type tag at the end of a line for a form field: <code>[text]</code>, <code>[textarea]</code>, <code>[date]</code>, <code>[number]</code>, <code>[select]</code> (one choice), <code>[multi]</code> (several choices) or <code>[kinney]</code> (W × B × E with live score). Under a select or multi line, list the options one per line starting with <code>- </code>. Renamed lines keep their data; removed lines show as removed in reports.',
  imported:'Imported {p} project(s)', importErr:'Could not read this file: not a valid export.', replaceProject:'Project "{n}" already exists. Replace it? Cancel keeps the existing one.',
@@ -204,7 +207,7 @@ nl:{
  keys:'↑ ↓ verplaatsen · spatie = van toepassing / n.v.t. · C = opmerking · Esc = opmerking sluiten · ← → blok',
  noProjects:'Nog geen projecten. Maak er een aan om te beginnen.', noAnalyses:'Nog geen analyses in dit project.',
  noDev:'Geen afwijkingen vastgelegd in dit blok.', removed:'Verwijderde items', removedOne:'(verwijderd item)', updated:'Bijgewerkt', duplicate:'Dupliceren',
- timesMarked:'Aantal keer gemarkeerd', acrossN:'over {n} analyses', filled:'ingevuld', title:'Omschrijving',
+ timesMarked:'Aantal keer gemarkeerd', acrossN:'over {n} analyses', filled:'ingevuld', title:'Omschrijving', sync:'Sync', synced:'Gesynchroniseerd vanaf ander apparaat', offline:'standalone', syncSame:'Gelijktijdig bewerken van dezelfde analyse op twee apparaten: de laatste opslag wint.',
  conclPh:'Bevindingen, samenvatting basisoorzaken, acties met eigenaar en datum…',
  qHelp:'Eén regel per item als <code>English | Nederlands</code> (laat het Nederlandse deel leeg om de Engelse tekst te hergebruiken). <code>#</code> start een blok (één scherm in de analyse, één sectie in het rapport), <code>##</code> een kop, <code>###</code> een subkop, enzovoort. Elke andere regel is een aanvinkitem. Zet een typelabel aan het einde van een regel voor een invulveld: <code>[text]</code>, <code>[textarea]</code>, <code>[date]</code>, <code>[number]</code>, <code>[select]</code> (één keuze), <code>[multi]</code> (meerdere keuzes) of <code>[kinney]</code> (W × B × E met live score). Zet onder een select- of multi-regel de opties elk op een eigen regel die begint met <code>- </code>. Hernoemde regels behouden hun gegevens; verwijderde regels worden in rapporten als verwijderd getoond.',
  imported:'{p} project(en) geïmporteerd', importErr:'Bestand kon niet worden gelezen: geen geldige export.', replaceProject:'Project "{n}" bestaat al. Vervangen? Annuleren behoudt het bestaande project.',
@@ -573,7 +576,7 @@ function kwScore(a){return kwScoreV(kwVal(a));}
 function kwTextV(v){const k=kwScoreV(v);return k?`${v.w} × ${v.b} × ${v.e} = ${k.r} · ${t('kwClass')[k.cls]}`:t('kwNone');}
 
 /* ---------- state ---------- */
-const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+const uid=()=>(SYNC&&SYNC.util&&SYNC.util.uid)?SYNC.util.uid():Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
 const today=()=>new Date().toISOString().slice(0,10);
 function fresh(){return {v:3,lang:'en',questionnaires:[],projects:[],ui:{view:'projects',pid:null,aid:null,step:'details',report:'exc'}};}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.v>=1&&s.v<=3)return s;}catch(e){}return null;}
@@ -602,7 +605,56 @@ function migrate(){
   for(const p of state.projects)for(const a of p.analyses)a.vals=a.vals||{};
   save();
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){toast('Storage error: '+e.message);}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(SYNC?{v:3,lang:state.lang,ui:state.ui,questionnaires:[],projects:[],synced:true}:state));}catch(e){toast('Storage error: '+e.message);}}
+
+/* ---------- sfha-sync persistence (DB is the source of truth when SYNC is present) ---------- */
+const own=new Set();const QREC=q=>APP+'.q.'+q.id;
+const pPayload=p=>({id:p.id,name:p.name,site:p.site,created:p.created,lastQ:p.lastQ});
+async function pQ(q){save();if(!SYNC)return;own.add(QREC(q));await SYNC.put(APP,'questionnaires',{id:QREC(q),payload:q});}
+async function dQ(q){save();if(!SYNC)return;own.add(QREC(q));await SYNC.del(APP,'questionnaires',QREC(q));}
+async function pP(p){save();if(!SYNC)return;own.add(p.id);await SYNC.put(APP,'projects',{id:p.id,payload:pPayload(p)});}
+async function dP(p){save();if(!SYNC)return;own.add(p.id);await SYNC.del(APP,'projects',p.id);for(const a of p.analyses){own.add(a.id);await SYNC.del(APP,'analyses',a.id);}}
+const aTimers={};
+function pA(a,pid,now){save();if(!SYNC)return;a.pid=pid||a.pid;const f=async()=>{delete aTimers[a.id];own.add(a.id);await SYNC.put(APP,'analyses',{id:a.id,payload:a});};
+  clearTimeout(aTimers[a.id]);if(now)f();else aTimers[a.id]=setTimeout(f,400);}
+async function dA(a){save();if(!SYNC)return;clearTimeout(aTimers[a.id]);own.add(a.id);await SYNC.del(APP,'analyses',a.id);}
+async function loadFromSync(){
+  const qs=await SYNC.list(APP,'questionnaires'),ps=await SYNC.list(APP,'projects'),as=await SYNC.list(APP,'analyses');
+  state.questionnaires=qs.map(r=>r.payload);
+  const byP={};state.projects=ps.map(r=>{const p={...r.payload,analyses:[],updated:r.updatedAt};byP[p.id]=p;return p;});
+  for(const r of as){const a=r.payload;a._u=r.updatedAt;const p=byP[a.pid];if(!p)continue;p.analyses.push(a);if(r.updatedAt>p.updated)p.updated=r.updatedAt;}
+  if(!state.questionnaires.length){const q=soatStarter();state.questionnaires=[q];await pQ(q);}
+  for(const p of state.projects)for(const a of p.analyses)a.vals=a.vals||{};
+}
+let pendingRender=false;
+function onRemoteChange(ch){
+  if(ch.app!==APP||!ch.ids||!ch.ids.length)return;
+  if(ch.ids.every(id=>own.has(id))){ch.ids.forEach(id=>own.delete(id));return;}
+  ch.ids.forEach(id=>own.delete(id));
+  loadFromSync().then(()=>{const el=document.activeElement;
+    if(el&&['INPUT','TEXTAREA','SELECT'].includes(el.tagName)&&el.closest('#app')){if(!pendingRender){pendingRender=true;el.addEventListener('blur',()=>{pendingRender=false;render();},{once:true});}return;}
+    render();toast(t('synced'));});
+}
+async function boot(){
+  if(SYNC){
+    await SYNC.init({app:APP});
+    const local=state; // whatever localStorage held before this device joined sync
+    await SYNC.migrate('v1',async()=>{
+      if(local.synced)return;const old=new Date(0).toISOString();
+      for(const q of local.questionnaires)await SYNC.put(APP,'questionnaires',{id:QREC(q),payload:q,updatedAt:old},{keepStamp:true,silent:true});
+      for(const p of local.projects){const st=p.updated||old;await SYNC.put(APP,'projects',{id:p.id,payload:pPayload(p),updatedAt:st},{keepStamp:true,silent:true});
+        for(const a of p.analyses){a.pid=p.id;await SYNC.put(APP,'analyses',{id:a.id,payload:a,updatedAt:st},{keepStamp:true,silent:true});}}
+    });
+    await loadFromSync();
+    SYNC.onChange(onRemoteChange);
+    if(SYNC.onStatus)SYNC.onStatus(()=>{const el=document.getElementById('syncdot');if(el)el.textContent=syncLabel();});
+    window.addEventListener('beforeunload',()=>{for(const id in aTimers){clearTimeout(aTimers[id]);}});
+    window.addEventListener('pagehide',flushNow);
+  }
+  save();render();
+}
+function flushNow(){for(const id in aTimers){clearTimeout(aTimers[id]);delete aTimers[id];for(const p of state.projects){const a=p.analyses.find(x=>x.id===id);if(a){own.add(a.id);SYNC.put(APP,'analyses',{id:a.id,payload:a});}}}}
+function syncLabel(){if(!SYNC)return '';try{const s=SYNC.status();const n=(s.connections||[]).length;return (s.leaderPresent||s.leader?'●':'○')+(n?' '+n:'');}catch(e){return '';}}
 const proj=()=>state.projects.find(p=>p.id===state.ui.pid);
 const ana=()=>{const p=proj();return p&&p.analyses.find(a=>a.id===state.ui.aid);};
 const qOf=a=>state.questionnaires.find(q=>q.id===a.qid)||{id:a.qid,name:'?',blocks:[]};
@@ -634,7 +686,7 @@ function renderTop(){
   if(state.ui.view==='settings')crumbs+=`<span>›</span><b>${t('settings')}</b>`;
   document.getElementById('top').innerHTML=`<div class="brand">${t('appName')}</div><div class="crumbs">${crumbs}</div>
    <div class="seg"><button data-lang="en" class="${state.lang==='en'?'on':''}">EN</button><button data-lang="nl" class="${state.lang==='nl'?'on':''}">NL</button></div>
-   <button data-go="settings" title="${t('settings')}">⚙</button>`;
+   ${SYNC?`<button data-sync title="${t('sync')}">⇄ <span id="syncdot">${syncLabel()}</span></button>`:''}<button data-go="settings" title="${t('settings')}">⚙</button>`;
 }
 const aTitle=a=>{for(const f of qFields(qOf(a)))if((f.f==='text'||f.f==='textarea')&&a.vals[f.id])return String(a.vals[f.id]);return '';};
 const short=(s,n=48)=>{s=(s||'').trim().split('\n')[0];return s.length>n?s.slice(0,n-1)+'…':s;};
@@ -780,7 +832,7 @@ function vSettings(){
   return `<div class="stack">
    <h1>${t('settings')}</h1>
    <h2>${t('langTitle')}</h2><div class="seg"><button data-lang="en" class="${state.lang==='en'?'on':''}">English</button><button data-lang="nl" class="${state.lang==='nl'?'on':''}">Nederlands</button></div>
-   <h2>${t('dataTitle')}</h2><div class="row"><button data-export-all>${t('exportAll')}</button><button id="importBtn">${t('importFile')}</button><span class="small muted">${t('storage')}</span></div>
+   <h2>${t('dataTitle')}</h2><div class="row"><button data-export-all>${t('exportAll')}</button><button id="importBtn">${t('importFile')}</button>${SYNC?`<button data-sync>⇄ ${t('sync')}</button>`:''}<span class="small muted">${SYNC?t('syncSame'):t('storage')}</span></div>
    <h2>${t('kw')}</h2>${kwTable()}
    <div class="row"><h2 class="grow">${t('questionnaires')}</h2><button id="addQ">${t('addQ')}</button>${state.questionnaires.some(q=>q.id==='soat')?'':`<button data-qrestore="soat">${t('restoreSoat')}</button>`}</div>
    <div class="help">${t('qHelp')}</div>
@@ -789,7 +841,7 @@ function vSettings(){
 }
 function saveQ(id){const i=state.questionnaires.findIndex(q=>q.id===id);if(i<0)return;const old=state.questionnaires[i];
   const q=parseQ(document.querySelector(`[data-qtext="${id}"]`).value,old);q.name=document.querySelector(`[data-qname="${id}"]`).value.trim()||old.name;
-  state.questionnaires[i]=q;save();toast(t('saved'));render();}
+  state.questionnaires[i]=q;pQ(q);toast(t('saved'));render();}
 
 /* ---------- import / export ---------- */
 function download(fname,obj){const blob=new Blob([JSON.stringify(obj,null,1)],{type:'application/json'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=fname;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}
@@ -804,17 +856,18 @@ function importJSON(text){
     const s=state;state={v:d.v,lang:s.lang,taxonomy:d.taxonomy,questionnaires:d.questionnaires||[],projects:d.projects,ui:s.ui};migrate();d={questionnaires:state.questionnaires,projects:state.projects};state=s;}
   let n=0;
   for(const q of d.questionnaires||[]){const i=state.questionnaires.findIndex(x=>x.id===q.id);
-    if(i<0)state.questionnaires.push(q);else if(JSON.stringify(state.questionnaires[i])!==JSON.stringify(q)&&confirm(t('replaceQ',{n:q.name})))state.questionnaires[i]=q;}
+    if(i<0){state.questionnaires.push(q);pQ(q);}else if(JSON.stringify(state.questionnaires[i])!==JSON.stringify(q)&&confirm(t('replaceQ',{n:q.name}))){state.questionnaires[i]=q;pQ(q);}}
   for(const p of d.projects){if(!p.id||!p.analyses)continue;
     const i=state.projects.findIndex(x=>x.id===p.id);
-    if(i>=0){if(!confirm(t('replaceProject',{n:p.name})))continue;state.projects[i]=p;}else state.projects.push(p);n++;}
+    if(i>=0){if(!confirm(t('replaceProject',{n:p.name})))continue;for(const a of state.projects[i].analyses)if(!p.analyses.some(x=>x.id===a.id))dA(a);state.projects[i]=p;}else state.projects.push(p);n++;
+    p.analyses.forEach(a=>{a.vals=a.vals||{};a.pid=p.id;});pP(p);for(const a of p.analyses)pA(a,p.id,true);}
   save();toast(t('imported',{p:n}));render();
 }
 
 /* ---------- mutations ---------- */
-function touch(){const p=proj();if(p)p.updated=new Date().toISOString();}
-function newAnalysis(p,qid){const a={id:uid(),qid,date:today(),site:p.site||'',analyst:'',status:'draft',conclusions:'',marks:{},vals:{}};p.analyses.push(a);p.lastQ=qid;touch();save();return a;}
-function setMark(id,patch){const a=ana();const m={...mark(a,id),...patch};if(m.s===0&&!(m.c&&m.c.trim()))delete a.marks[id];else a.marks[id]=m;touch();save();}
+function touch(){const p=proj();if(p)p.updated=new Date().toISOString();const a=ana();if(a)a._u=p.updated;}
+function newAnalysis(p,qid){const a={id:uid(),pid:p.id,qid,date:today(),site:p.site||'',analyst:'',status:'draft',conclusions:'',marks:{},vals:{}};p.analyses.push(a);const lq=p.lastQ!==qid;p.lastQ=qid;touch();pA(a,p.id,true);if(lq)pP(p);return a;}
+function setMark(id,patch){const a=ana();const m={...mark(a,id),...patch};if(m.s===0&&!(m.c&&m.c.trim()))delete a.marks[id];else a.marks[id]=m;touch();pA(a);}
 function updateRow(id){const a=ana();const m=mark(a,id);const el=document.querySelector(`.item[data-id="${id}"]`);if(!el)return;
   el.className=`item s${m.s} ${m.c&&m.c.trim()?'hc':''}`;el.querySelector('.st').textContent=GL[m.s];el.setAttribute('aria-pressed',m.s===1);
   const q=qOf(a),b=q.blocks[+state.ui.step.slice(1)];if(!b)return;const c=blockCounts(a,b);
@@ -827,32 +880,33 @@ function setStep(s){state.ui.step=s;state.ui.openC=null;save();render();}
 /* ---------- events ---------- */
 const app=document.getElementById('app');
 document.body.addEventListener('click',e=>{
-  const b=e.target.closest('[data-go],[data-lang],[data-step],[data-rep],[data-open-p],[data-del-p],[data-open-a],[data-rep-a],[data-dup-a],[data-del-a],[data-export-p],[data-export-all],[data-qsave],[data-qdel],[data-qrestore],#newAna,#importBtn,#addQ,.item,.cb');
+  const b=e.target.closest('[data-go],[data-lang],[data-step],[data-rep],[data-open-p],[data-del-p],[data-open-a],[data-rep-a],[data-dup-a],[data-del-a],[data-export-p],[data-export-all],[data-qsave],[data-qdel],[data-qrestore],[data-sync],#newAna,#importBtn,#addQ,.item,.cb');
   if(!b)return;const d=b.dataset;
   if(b.classList.contains('cb')){e.stopPropagation();toggleComment(d.c);return;}
   if(b.classList.contains('item')){cycle(d.id);b.focus();return;}
+  if(d.sync!==undefined){SYNC.openPanel();return;}
   if(d.lang){state.lang=d.lang;save();render();return;}
   if(d.go){state.ui.openC=null;go(d.go);return;}
   if(d.step){setStep(d.step);return;}
   if(d.rep){state.ui.report=d.rep;save();render();return;}
   if(d.openP){go('project',{pid:d.openP,aid:null});return;}
-  if(d.delP){if(confirm(t('confirmDel'))){state.projects=state.projects.filter(p=>p.id!==d.delP);save();render();}return;}
+  if(d.delP){if(confirm(t('confirmDel'))){const p=state.projects.find(x=>x.id===d.delP);state.projects=state.projects.filter(x=>x.id!==d.delP);if(p)dP(p);else save();render();}return;}
   if(d.openA){go('analysis',{aid:d.openA,step:'details'});return;}
   if(d.repA){go('report',{aid:d.repA});return;}
-  if(d.dupA){const p=proj();const src=p.analyses.find(a=>a.id===d.dupA);const c=JSON.parse(JSON.stringify(src));c.id=uid();c.date=today();c.status='draft';c.vals=c.vals||{};p.analyses.push(c);touch();save();render();return;}
-  if(d.delA){if(confirm(t('confirmDel'))){const p=proj();p.analyses=p.analyses.filter(a=>a.id!==d.delA);touch();save();render();}return;}
+  if(d.dupA){const p=proj();const src=p.analyses.find(a=>a.id===d.dupA);const c=JSON.parse(JSON.stringify(src));c.id=uid();c.date=today();c.status='draft';c.vals=c.vals||{};c.pid=p.id;p.analyses.push(c);touch();pA(c,p.id,true);render();return;}
+  if(d.delA){if(confirm(t('confirmDel'))){const p=proj();const a=p.analyses.find(x=>x.id===d.delA);p.analyses=p.analyses.filter(x=>x.id!==d.delA);touch();if(a)dA(a);else save();render();}return;}
   if(d.exportP){exportProject(state.projects.find(p=>p.id===d.exportP));return;}
   if(d.exportAll!==undefined){exportAll();return;}
   if(d.qsave){saveQ(d.qsave);return;}
-  if(d.qdel){if(confirm(t('confirmDelQ'))){state.questionnaires=state.questionnaires.filter(q=>q.id!==d.qdel);if(!state.questionnaires.length)state.questionnaires=[blankQ()];save();render();}return;}
-  if(d.qrestore){const i=state.questionnaires.findIndex(q=>q.id==='soat');if(i<0){state.questionnaires.unshift(soatStarter());}else{if(!confirm(t('confirmRestore')))return;state.questionnaires[i]=soatStarter(state.questionnaires[i]);}save();render();toast(t('saved'));return;}
-  if(b.id==='addQ'){state.questionnaires.push(blankQ());save();render();return;}
+  if(d.qdel){if(confirm(t('confirmDelQ'))){const q=state.questionnaires.find(x=>x.id===d.qdel);state.questionnaires=state.questionnaires.filter(x=>x.id!==d.qdel);if(q)dQ(q);if(!state.questionnaires.length){const nq=blankQ();state.questionnaires=[nq];pQ(nq);}render();}return;}
+  if(d.qrestore){const i=state.questionnaires.findIndex(q=>q.id==='soat');let q;if(i<0){q=soatStarter();state.questionnaires.unshift(q);}else{if(!confirm(t('confirmRestore')))return;q=soatStarter(state.questionnaires[i]);state.questionnaires[i]=q;}pQ(q);render();toast(t('saved'));return;}
+  if(b.id==='addQ'){const q=blankQ();state.questionnaires.push(q);pQ(q);render();return;}
   if(b.id==='newAna'){const p=proj();const sel=document.getElementById('newQsel');const qid=sel?sel.value:state.questionnaires[0].id;const a=newAnalysis(p,qid);go('analysis',{aid:a.id,step:'details'});return;}
   if(b.id==='importBtn'){document.getElementById('importFile').click();return;}
 });
-app.addEventListener('submit',e=>{if(e.target.id==='newProj'){e.preventDefault();const f=new FormData(e.target);const p={id:uid(),name:f.get('name').trim(),site:(f.get('site')||'').trim(),created:new Date().toISOString(),updated:new Date().toISOString(),analyses:[]};if(!p.name)return;state.projects.push(p);go('project',{pid:p.id,aid:null});}});
-function setField(el){const a=ana();if(!a)return;a[el.dataset.f]=el.value;touch();save();}
-function setVal(id,v){const a=ana();if(!a)return;if(hasVal(v))a.vals[id]=v;else delete a.vals[id];touch();save();
+app.addEventListener('submit',e=>{if(e.target.id==='newProj'){e.preventDefault();const f=new FormData(e.target);const p={id:uid(),name:f.get('name').trim(),site:(f.get('site')||'').trim(),created:new Date().toISOString(),updated:new Date().toISOString(),analyses:[]};if(!p.name)return;state.projects.push(p);pP(p);go('project',{pid:p.id,aid:null});}});
+function setField(el){const a=ana();if(!a)return;a[el.dataset.f]=el.value;touch();pA(a);}
+function setVal(id,v){const a=ana();if(!a)return;if(hasVal(v))a.vals[id]=v;else delete a.vals[id];touch();pA(a);
   const b=qOf(a).blocks[+state.ui.step.slice(1)];if(!b)return;const c=blockCounts(a,b);const rb=document.querySelector(`.rail [data-step="${state.ui.step}"] .cnt`);if(rb)rb.innerHTML=cntHtml(c);const bh=document.getElementById('bcount');if(bh)bh.textContent=`${c.m} ${t('marked')} / ${c.tot}`;}
 function fieldEvent(e){const el=e.target,d=el.dataset;const a=ana();if(!a)return false;
   if(d.f){setField(el);return true;}
@@ -886,7 +940,7 @@ document.addEventListener('keydown',e=>{
 function setPrintOrientation(){let s=document.getElementById('pp');if(!s){s=document.createElement('style');s.id='pp';document.head.appendChild(s);}
   const land=state.ui.view==='report'&&state.ui.report==='full';s.textContent=`@page{size:A4 ${land?'landscape':'portrait'};margin:14mm 12mm}`;}
 
-render();
+boot();
 </script>
 </body>
 </html>
