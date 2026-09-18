@@ -175,7 +175,8 @@ en:{
  analyst:'Analyst', status:'Status', draft:'Draft', final:'Final',
  conclusions:'Conclusions and actions', exceptions:'Deviations only', full:'All items', print:'Print / PDF',
  settings:'Settings', questionnaires:'Questionnaires', questionnaire:'Questionnaire', addQ:'Add questionnaire', restoreSoat:'Restore SOAT starter',
- confirmRestore:'Replace the SOAT questionnaire with the built-in starter? Marks on items that no longer exist will show as removed.',
+ restoreQ:'Restore starter', wipe:'Delete all data of this app', confirmWipe:'Delete ALL projects, analyses and questionnaires of this app (on every synced device too)? Export first if in doubt.',
+ confirmRestore:'Replace this questionnaire with the built-in starter? Marks on items that no longer exist will show as removed.',
  confirmDelQ:'Delete this questionnaire? Analyses that use it will show all their marks as removed items.',
  qName:'Name', save:'Save', exportAll:'Export everything', exportProject:'Export this project', importFile:'Import file',
  comment:'Comment', commentPh:'What was observed…',
@@ -200,7 +201,8 @@ nl:{
  analyst:'Analist', status:'Status', draft:'Concept', final:'Definitief',
  conclusions:'Conclusies en acties', exceptions:'Alleen afwijkingen', full:'Alle items', print:'Printen / PDF',
  settings:'Instellingen', questionnaires:'Vragenlijsten', questionnaire:'Vragenlijst', addQ:'Vragenlijst toevoegen', restoreSoat:'SOAT-startset herstellen',
- confirmRestore:'De SOAT-vragenlijst vervangen door de ingebouwde startset? Markeringen op items die niet meer bestaan worden als verwijderd getoond.',
+ restoreQ:'Startset herstellen', wipe:'Alle gegevens van deze app verwijderen', confirmWipe:'ALLE projecten, analyses en vragenlijsten van deze app verwijderen (ook op alle gesynchroniseerde apparaten)? Exporteer eerst bij twijfel.',
+ confirmRestore:'Deze vragenlijst vervangen door de ingebouwde startset? Markeringen op items die niet meer bestaan worden als verwijderd getoond.',
  confirmDelQ:'Deze vragenlijst verwijderen? Analyses die haar gebruiken tonen al hun markeringen als verwijderde items.',
  qName:'Naam', save:'Opslaan', exportAll:'Alles exporteren', exportProject:'Dit project exporteren', importFile:'Bestand importeren',
  comment:'Opmerking', commentPh:'Wat is waargenomen…',
@@ -227,7 +229,6 @@ function parseQ(text,old){
   const oldItems=[];(old&&old.blocks||[]).forEach(b=>b.items.forEach(i=>{if(!i.t)oldItems.push(i);}));
   const qid=(old&&old.id)||uid();
   const used=new Set(),byEn=new Map();oldItems.forEach(i=>{if(!byEn.has(i.en))byEn.set(i.en,i);});
-  let maxN=0;oldItems.forEach(i=>{const n=parseInt(String(i.id).split('.').pop());if(n>maxN)maxN=n;});
   const enLater=new Set(text.split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith('#')).map(l=>l.split('|')[0].trim()));
   const blocks=[];let cur=null,pos=0;
   const ensure=()=>{if(!cur){cur={title:{en:t('general'),nl:t('general')},items:[]};blocks.push(cur);}};
@@ -243,18 +244,407 @@ function parseQ(text,old){
     const [en,nl]=line.split('|').map(s=>s.trim());
     let o=byEn.get(en);if(o&&used.has(o.id))o=null;
     if(!o){const cand=oldItems[pos];if(cand&&!used.has(cand.id)&&!enLater.has(cand.en))o=cand;}
-    const id=o?o.id:qid+'.'+(++maxN);used.add(id);
+    let id=o?o.id:qid+'.'+hid(en);while(used.has(id))id+='x';used.add(id);
     const it={id,en,nl:nl||en};if(f){it.f=f;if(f==='select'||f==='multi')it.opts=[];}cur.items.push(it);pos++;}
   return {id:qid,name:(old&&old.name)||'',blocks};
 }
+function hid(str){let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))|0;return (h>>>0).toString(36);}
 const enl=it=>it.en+(it.nl&&it.nl!==it.en?' | '+it.nl:'');
 function qText(q){return q.blocks.map(b=>`# ${b.title.en}${b.title.nl&&b.title.nl!==b.title.en?' | '+b.title.nl:''}\n`+b.items.map(it=>it.t?'#'.repeat(it.lvl)+' '+enl(it):enl(it)+(it.f?' ['+it.f+']':'')+(it.opts?it.opts.map(o=>'\n- '+enl(o)).join(''):'')).join('\n')).join('\n\n');}
 const isField=it=>!it.t&&!!it.f;
 function qFields(q){return qItems(q).filter(isField);}
 function qItems(q){const out=[];q.blocks.forEach(b=>b.items.forEach(i=>{if(!i.t)out.push(i);}));return out;}
 
-/* ---------- built-in SOAT questionnaire (Aviko SOAT v2.0 lists; control block = generic ILCI management elements) ---------- */
-const SOAT_TEXT=`# Incident | Incident
+/* ---------- built-in questionnaires ---------- */
+const STARTERS={
+ sat:{name:'SAT',text:`# Assessment | Beoordeling
+Machine / installation | Machine / installatie [text]
+Scope of the assessment | Reikwijdte van de beoordeling [textarea]
+
+# General Requirements | Algemene Eisen
+## Safety Management & Compliance | Veiligheidsmanagement en Compliance
+Is the machine or modification covered by a documented risk assessment? | Is de machine of wijziging opgenomen in een gedocumenteerde risicobeoordeling?
+Have identified risks been reduced according to the hierarchy of controls? | Zijn geïdentificeerde risico's gereduceerd volgens de arbeidshygiënische strategie?
+Are legal requirements, standards and company SHE requirements known and complied with? | Zijn wettelijke eisen, normen en bedrijfs-SHE-eisen bekend en nageleefd?
+Have management of change (MoC) requirements been completed before commissioning? | Zijn de eisen van Management of Change (MoC) afgerond vóór ingebruikname?
+Have all residual risks been identified and communicated to users? | Zijn alle restrisico's geïdentificeerd en gecommuniceerd aan gebruikers?
+Are workplace inspections and audits performed periodically? | Worden werkplekinspecties en audits periodiek uitgevoerd?
+Are safety observations, incidents and near misses reported and followed up? | Worden veiligheidsobservaties, incidenten en bijna-ongevallen gemeld en opgevolgd?
+
+# Machine Safety & Regulatory Compliance | Machineveiligheid en Wettelijke Compliance
+## CE Marking & Documentation | CE-markering en Documentatie
+Is a valid Declaration of Conformity available? | Is een geldige Verklaring van Overeenstemming beschikbaar?
+Is the CE marking clearly visible and legible? | Is de CE-markering duidelijk zichtbaar en leesbaar?
+Is the machine identification plate present and complete? | Is het machine-identificatieplaatje aanwezig en volledig?
+Are operating instructions available in the local language? | Zijn gebruiksinstructies beschikbaar in de lokale taal?
+Is the technical file available and up to date? | Is het technisch dossier beschikbaar en actueel?
+Have all modifications been assessed for their impact on CE compliance? | Zijn alle wijzigingen beoordeeld op hun invloed op CE-conformiteit?
+Have significant modifications been evaluated as possible new machinery? | Zijn ingrijpende wijzigingen beoordeeld als mogelijke nieuwe machine?
+## Machine Regulation (EU) 2023/1230 | Machineverordening (EU) 2023/1230
+Has cybersecurity been evaluated where safety-related functions depend on software or connectivity? | Is cybersecurity beoordeeld wanneer veiligheidsfuncties afhankelijk zijn van software of connectiviteit?
+Are safety-related control systems protected against unauthorized access? | Zijn veiligheidsgerelateerde besturingssystemen beschermd tegen ongeautoriseerde toegang?
+Are software updates controlled and validated before implementation? | Worden software-updates beheerst en gevalideerd vóór implementatie?
+Has human-machine interaction been assessed for foreseeable misuse? | Is de mens-machine-interactie beoordeeld op voorzienbaar verkeerd gebruik?
+Are digital instructions and safety information accessible throughout the machine lifecycle? | Zijn digitale instructies en veiligheidsinformatie toegankelijk gedurende de gehele levenscyclus?
+Are AI-based or adaptive functions validated for safe operation? | Zijn AI-gebaseerde of adaptieve functies gevalideerd voor veilige werking?
+Have remote access and remote intervention risks been assessed? | Zijn risico's van toegang op afstand en interventies op afstand beoordeeld?
+Are safety-related software changes documented and traceable? | Zijn wijzigingen in veiligheidsgerelateerde software gedocumenteerd en traceerbaar?
+Are connected machine interfaces protected against manipulation? | Zijn gekoppelde machine-interfaces beschermd tegen manipulatie?
+Has the machine supplier provided evidence that digital safety functions meet regulatory requirements? | Heeft de leverancier aangetoond dat digitale veiligheidsfuncties voldoen aan de regelgeving?
+
+# Mechanical Safety | Mechanische Veiligheid
+## Guarding & Access Prevention | Afscherming en Toegangsbeveiliging
+Are all moving parts effectively guarded? | Zijn alle bewegende delen effectief afgeschermd?
+Are guards securely mounted and not easily bypassed? | Zijn afschermingen stevig bevestigd en niet eenvoudig te omzeilen?
+Are interlocked guards functioning correctly? | Werken vergrendelde afschermingen correct?
+Can hazardous movement only occur when guards are closed and secured? | Kan gevaarlijke beweging alleen plaatsvinden wanneer afschermingen gesloten en vergrendeld zijn?
+Are openings in guards compliant with reach distance requirements? | Voldoen openingen in afschermingen aan de reikwijdte-eisen?
+Are pinch points, shear points and crushing hazards adequately protected? | Zijn knel-, schaar- en beknellingsgevaren voldoende afgeschermd?
+## Mechanical Integrity | Mechanische Integriteit
+Do machine structures show no signs of damage or corrosion? | Vertonen machineconstructies geen beschadigingen of corrosie?
+Are load-bearing components inspected and maintained? | Worden dragende onderdelen geïnspecteerd en onderhouden?
+Are rotating components free from excessive vibration? | Zijn roterende onderdelen vrij van overmatige trillingen?
+Are couplings, belts, chains and gears adequately protected? | Zijn koppelingen, riemen, kettingen en tandwielen voldoende afgeschermd?
+Are pressure systems inspected and certified where required? | Zijn druksystemen geïnspecteerd en gecertificeerd waar vereist?
+
+# Functional Safety | Functionele Veiligheid
+## Safety Functions | Veiligheidsfuncties
+Have required safety performance levels (PL) or SIL levels been determined? | Zijn vereiste Performance Levels (PL) of SIL-niveaus bepaald?
+Do safety functions achieve the required PL or SIL? | Bereiken veiligheidsfuncties het vereiste PL- of SIL-niveau?
+Are safety PLCs and relays functioning correctly? | Functioneren veiligheids-PLC's en veiligheidsrelais correct?
+Are safety circuits periodically tested? | Worden veiligheidscircuits periodiek getest?
+Are fault conditions detected and handled safely? | Worden foutcondities gedetecteerd en veilig afgehandeld?
+Is restart prevention implemented after safety trips? | Is herstartbeveiliging toegepast na veiligheidsafschakeling?
+## Emergency Stops | Noodstopvoorzieningen
+Are emergency stop devices clearly visible? | Zijn noodstopvoorzieningen duidelijk zichtbaar?
+Are emergency stop devices easily accessible? | Zijn noodstopvoorzieningen eenvoudig bereikbaar?
+Have emergency stops been tested and documented? | Zijn noodstoppen getest en gedocumenteerd?
+Does emergency stop activation remove hazardous energy safely? | Verwijdert activering van de noodstop gevaarlijke energie op veilige wijze?
+Is manual reset required before restarting? | Is een handmatige reset vereist vóór herstart?
+
+# Electrical Safety | Elektrische Veiligheid
+## Electrical Installations | Elektrische Installaties
+Are electrical installations compliant with applicable standards? | Voldoen elektrische installaties aan de van toepassing zijnde normen?
+Are electrical panels closed, labelled and secured? | Zijn elektrische panelen gesloten, gelabeld en beveiligd?
+Are live parts protected against accidental contact? | Zijn spanningsvoerende delen beschermd tegen toevallig contact?
+Is protective earth continuity verified? | Is de beschermingsaarding gecontroleerd?
+Are cable entries properly protected and sealed? | Zijn kabelinvoeren correct beschermd en afgedicht?
+Is thermal damage absent from electrical components? | Zijn er geen tekenen van thermische schade aan elektrische componenten?
+## Isolation & LOTO | Scheiding en LOTO
+Are lockout/tagout procedures available and followed? | Zijn lockout/tagout-procedures beschikbaar en gevolgd?
+Can all hazardous energy sources be isolated? | Kunnen alle gevaarlijke energiebronnen worden geïsoleerd?
+Are isolation points clearly identified? | Zijn isolatiepunten duidelijk geïdentificeerd?
+Is verification of zero-energy state performed before work starts? | Wordt gecontroleerd op een energieloze toestand voordat werkzaamheden starten?
+
+# Process Safety | Procesveiligheid
+## Hazardous Energy & Stored Energy | Gevaarlijke Energie en Opgeslagen Energie
+Are hydraulic systems free from leaks? | Zijn hydraulische systemen vrij van lekkages?
+Are pneumatic systems free from leaks? | Zijn pneumatische systemen vrij van lekkages?
+Is stored pressure safely released before maintenance? | Wordt opgeslagen druk veilig afgelaten vóór onderhoud?
+Are accumulators identified and controlled? | Zijn accumulators geïdentificeerd en beheerst?
+Are gravity, spring and mechanical energy hazards controlled? | Zijn gevaren van zwaartekracht, veren en mechanische energie beheerst?
+
+# Chemical Safety | Chemische Veiligheid
+## Chemical Management | Chemicaliënbeheer
+Are SDS documents available and current? | Zijn veiligheidsinformatiebladen beschikbaar en actueel?
+Are chemical inventories current and complete? | Zijn chemicaliënregisters actueel en volledig?
+Are hazardous substances correctly labelled? | Zijn gevaarlijke stoffen correct gelabeld?
+Are incompatible substances segregated? | Zijn onverenigbare stoffen gescheiden opgeslagen?
+Are chemical exposure risks assessed? | Zijn blootstellingsrisico's van chemicaliën beoordeeld?
+Have substitution opportunities been evaluated? | Zijn substitutiemogelijkheden beoordeeld?
+## Emergency Measures | Noodvoorzieningen
+Are eyewash stations operational? | Zijn oogdouches operationeel?
+Are emergency showers operational? | Zijn nooddouches operationeel?
+Are spill kits available and suitable? | Zijn morssets beschikbaar en geschikt?
+Are chemical emergency procedures available? | Zijn procedures voor chemische noodsituaties beschikbaar?
+
+# Occupational Health | Arbeidshygiëne
+## Exposure Risks | Blootstellingsrisico's
+Are dust exposure levels controlled? | Worden stofblootstellingsniveaus beheerst?
+Are noise exposure levels assessed and controlled? | Zijn geluidsblootstellingsniveaus beoordeeld en beheerst?
+Are vibration risks assessed and controlled? | Zijn trillingsrisico's beoordeeld en beheerst?
+Are exposure measurements available where required? | Zijn blootstellingsmetingen beschikbaar waar vereist?
+Are local exhaust ventilation systems functioning effectively? | Functioneren lokale afzuigsystemen effectief?
+
+# Fire & Explosion Safety | Brand- en Explosieveiligheid
+## Fire Protection | Brandbeveiliging
+Are fire extinguishers available and inspected? | Zijn brandblussers beschikbaar en geïnspecteerd?
+Are fire detection systems operational? | Zijn branddetectiesystemen operationeel?
+Are escape routes clearly marked and unobstructed? | Zijn vluchtroutes duidelijk gemarkeerd en vrij toegankelijk?
+Are combustible materials adequately controlled? | Worden brandbare materialen adequaat beheerst?
+## ATEX & Explosive Atmospheres | ATEX en Explosieve Atmosferen
+Has an explosion risk assessment been completed? | Is een explosierisicobeoordeling uitgevoerd?
+Are hazardous zones identified and marked? | Zijn gevarenzones geïdentificeerd en gemarkeerd?
+Is ATEX-certified equipment used where required? | Wordt waar vereist ATEX-gecertificeerde apparatuur toegepast?
+Are ignition sources effectively controlled? | Worden ontstekingsbronnen effectief beheerst?
+
+# Environmental Protection | Milieubescherming
+## Environmental Controls | Milieubeheersing
+Are spill prevention measures implemented? | Zijn maatregelen ter voorkoming van morsingen geïmplementeerd?
+Are waste streams properly segregated? | Worden afvalstromen correct gescheiden?
+Are emissions controlled and monitored? | Worden emissies beheerst en gemonitord?
+Are water discharge requirements complied with? | Wordt voldaan aan lozingseisen?
+Are environmental incidents reported and investigated? | Worden milieu-incidenten gemeld en onderzocht?
+
+# Personal Protective Equipment | Persoonlijke Beschermingsmiddelen
+## PPE Management | PBM-beheer
+Is required PPE available for all tasks? | Zijn vereiste PBM's beschikbaar voor alle werkzaamheden?
+Is PPE in good condition and suitable for the risks? | Zijn PBM's in goede staat en geschikt voor de risico's?
+Are employees trained in PPE use and limitations? | Zijn medewerkers getraind in gebruik en beperkingen van PBM's?
+Is PPE compliance periodically verified? | Wordt naleving van PBM-gebruik periodiek gecontroleerd?
+
+# Emergency Preparedness | Noodvoorbereiding
+## Emergency Response | Noodrespons
+Are emergency plans available and current? | Zijn noodplannen beschikbaar en actueel?
+Are personnel trained in emergency response? | Zijn medewerkers getraind in noodrespons?
+Are emergency drills conducted periodically? | Worden noodsituatie-oefeningen periodiek uitgevoerd?
+Is an assembly point clearly identified? | Is een verzamelplaats duidelijk aangegeven?
+Are emergency contacts visible and current? | Zijn noodcontactgegevens zichtbaar en actueel?
+
+# Training & Competence | Opleiding en Competentie
+## Competence Management | Competentiebeheer
+Have operators received machine-specific training? | Hebben operators machine-specifieke training ontvangen?
+Are maintenance personnel adequately trained? | Zijn onderhoudsmedewerkers voldoende opgeleid?
+Are training records complete and current? | Zijn opleidingsregistraties volledig en actueel?
+Are contractors informed of relevant risks and controls? | Zijn contractors geïnformeerd over relevante risico's en beheersmaatregelen?
+
+# Ergonomics & Human Factors | Ergonomie en Menselijke Factoren
+## Workplace Design | Werkplekontwerp
+Are workstations ergonomically designed? | Zijn werkplekken ergonomisch ontworpen?
+Have repetitive task risks been evaluated? | Zijn risico's van repetitieve werkzaamheden beoordeeld?
+Are lifting aids available where required? | Zijn tilhulpmiddelen beschikbaar waar vereist?
+Are displays and controls easy to understand and operate? | Zijn displays en bedieningen eenvoudig te begrijpen en te bedienen?
+Has foreseeable human error been considered in the design? | Is voorzienbaar menselijk handelen meegenomen in het ontwerp?
+
+# Change Management & Commissioning | Wijzigingsbeheer en Inbedrijfstelling
+## Modification Management | Wijzigingsbeheer
+Has the modification been formally approved? | Is de wijziging formeel goedgekeurd?
+Have all affected documents been updated? | Zijn alle betrokken documenten bijgewerkt?
+Has a pre-startup safety review been completed? | Is een veiligheidsreview vóór opstart uitgevoerd?
+Have operators and maintenance personnel been trained on the changes? | Zijn operators en onderhoudsmedewerkers geïnstrueerd over de wijzigingen?
+## Validation & Acceptance Testing | Validatie en Acceptatietesten
+Have safety functions been tested after installation? | Zijn veiligheidsfuncties getest na installatie?
+Has the machine been tested under normal and abnormal conditions? | Is de machine getest onder normale en afwijkende omstandigheden?
+Have all identified actions been closed before handover? | Zijn alle geïdentificeerde acties afgesloten vóór overdracht?
+Has final SHE approval been granted before operational use? | Is definitieve SHE-goedkeuring verleend vóór operationeel gebruik?`},
+ taproot:{name:'TapRooT',text:`# Causal factor | Causale factor
+Causal factor | Causale factor [text]
+Type | Soort [select]
+- Human error | Menselijke fout
+- Equipment failure | Falen van apparatuur
+Description | Omschrijving [textarea]
+
+# Equipment causes | Apparatuur
+## 1.1 Equipment design / specifications | 1.1 Ontwerp / specificaties apparatuur
+Design inadequate for intended use | Ontwerp ontoereikend voor beoogd gebruik
+Incorrect specifications | Onjuiste specificaties
+No design review / testing | Geen ontwerpbeoordeling / test
+Design standards not followed | Ontwerpnormen niet gevolgd
+## 1.2 Equipment fabrication / construction | 1.2 Fabricage / bouw apparatuur
+Manufacturing defect | Fabricagefout
+Installation error | Installatiefout
+Materials not to specification | Materiaal niet volgens specificatie
+## 1.3 Equipment maintenance / testing | 1.3 Onderhoud / beproeving apparatuur
+Inadequate preventive maintenance | Ontoereikend preventief onderhoud
+Incorrect repair / overhaul | Onjuiste reparatie / revisie
+Calibration error | Kalibratiefout
+Testing insufficient or skipped | Beproeving onvoldoende of overgeslagen
+## 1.4 Equipment failure / degradation | 1.4 Falen / degradatie apparatuur
+Normal wear and tear | Normale slijtage
+Corrosion / erosion | Corrosie / erosie
+Fatigue / stress failure | Vermoeiing / spanningsbreuk
+Overload / abuse | Overbelasting / misbruik
+End of service life | Einde levensduur
+## 1.5 Equipment labeling / identification | 1.5 Labeling / identificatie apparatuur
+Missing or incorrect labels | Ontbrekende of onjuiste labels
+Confusing identification | Verwarrende identificatie
+## 1.6 Equipment guards / safety devices | 1.6 Afschermingen / beveiligingen
+Missing guards | Ontbrekende afschermingen
+Defeated / bypassed safety devices | Uitgeschakelde / overbrugde beveiligingen
+Inadequate protection | Ontoereikende bescherming
+
+# Procedure causes | Procedures
+## 2.1 Procedure not available | 2.1 Procedure niet beschikbaar
+No procedure exists for the task | Geen procedure voor de taak
+Procedure not accessible at point of use | Procedure niet beschikbaar op de werkplek
+## 2.2 Procedure content | 2.2 Inhoud procedure
+Technical inaccuracies | Technische onjuistheden
+Missing critical steps | Kritische stappen ontbreken
+Sequence incorrect | Onjuiste volgorde
+Tolerances / limits not specified | Toleranties / grenswaarden niet vermeld
+Warnings / hazards not documented | Waarschuwingen / gevaren niet vastgelegd
+## 2.3 Procedure usability | 2.3 Bruikbaarheid procedure
+Difficult to follow / unclear | Moeilijk te volgen / onduidelijk
+No illustrations / diagrams | Geen illustraties / schema's
+Poor formatting / organization | Slechte opmaak / indeling
+Wrong language / terminology | Verkeerde taal / terminologie
+Too long or too short | Te lang of te kort
+## 2.4 Procedure control / management | 2.4 Beheer procedure
+Not updated to reflect changes | Niet bijgewerkt na wijzigingen
+Revision control failures | Versiebeheer faalt
+Not reviewed / approved properly | Niet correct beoordeeld / goedgekeurd
+Obsolete procedure in use | Verouderde procedure in gebruik
+## 2.5 Procedure not used / enforced | 2.5 Procedure niet gebruikt / gehandhaafd
+Procedure available but not followed | Procedure beschikbaar maar niet gevolgd
+No enforcement of procedure use | Geen handhaving van procedurgebruik
+Workaround became standard practice | Omweg is gangbare praktijk geworden
+
+# Training causes | Training
+## 3.1 Training content / curriculum | 3.1 Inhoud / leerplan training
+Training material incomplete | Trainingsmateriaal onvolledig
+Incorrect or outdated content | Onjuiste of verouderde inhoud
+No training exists for this task | Geen training voor deze taak
+Does not cover critical knowledge / skills | Dekt kritische kennis / vaardigheden niet
+## 3.2 Training delivery | 3.2 Uitvoering training
+Inadequate instructor qualification | Instructeur onvoldoende gekwalificeerd
+Wrong training method (classroom vs hands-on) | Verkeerde trainingsvorm (klassikaal vs praktijk)
+Insufficient practice / exercises | Onvoldoende oefening / praktijk
+Training time inadequate | Trainingstijd ontoereikend
+## 3.3 Competence verification | 3.3 Toetsing van bekwaamheid
+No post-training evaluation | Geen evaluatie na de training
+Testing does not measure actual competence | Toets meet de werkelijke bekwaamheid niet
+Pass / fail criteria inappropriate | Slagingscriteria ongeschikt
+Retraining not enforced after failure | Hertraining niet afgedwongen na zakken
+## 3.4 Training records / management | 3.4 Trainingsregistratie / -beheer
+Training not tracked | Training niet geregistreerd
+Refresher training not scheduled | Herhalingstraining niet ingepland
+Personnel assigned without required training | Personeel ingezet zonder vereiste training
+## 3.5 On-the-job training (OJT) | 3.5 Training op de werkplek (OJT)
+OJT program inadequate | OJT-programma ontoereikend
+Mentoring / coaching insufficient | Begeleiding / coaching onvoldoende
+OJT completion not verified | Afronding OJT niet geverifieerd
+
+# Human engineering / ergonomics causes | Mens-machine / ergonomie
+## 4.1 Workspace / workstation design | 4.1 Ontwerp werkplek / werkstation
+Workstation layout poor | Slechte indeling werkstation
+Reach limitations not considered | Reikwijdte niet meegenomen
+Lighting inadequate | Verlichting ontoereikend
+Noise levels excessive | Te hoog geluidsniveau
+Temperature / humidity extreme | Extreme temperatuur / vochtigheid
+## 4.2 Human-machine interface (HMI) | 4.2 Mens-machine-interface (HMI)
+Displays hard to read / interpret | Displays moeilijk af te lezen / te interpreteren
+Controls confusing or mislabeled | Bedieningselementen verwarrend of verkeerd gelabeld
+Alarm design inadequate | Alarmontwerp ontoereikend
+Feedback from system insufficient | Terugkoppeling van systeem onvoldoende
+## 4.3 Human capability / limitations | 4.3 Menselijke capaciteit / beperkingen
+Physical strength requirements exceed ability | Vereiste fysieke kracht overstijgt vermogen
+Visual / auditory demands too high | Visuele / auditieve eisen te hoog
+Memory / attention demands excessive | Overmatige eisen aan geheugen / aandacht
+Multi-tasking demands unrealistic | Onrealistische multitasking-eisen
+## 4.4 Fatigue / work schedule | 4.4 Vermoeidheid / werkrooster
+Shift length excessive | Te lange dienst
+Inadequate rest breaks | Onvoldoende rustpauzes
+Circadian rhythm disruption | Verstoring van het dag-nachtritme
+Overtime / cumulative fatigue | Overwerk / opgebouwde vermoeidheid
+## 4.5 Environmental conditions | 4.5 Omgevingscondities
+Extreme temperatures | Extreme temperaturen
+Hazardous atmosphere | Gevaarlijke atmosfeer
+Vibration / motion | Trillingen / beweging
+Confined space | Besloten ruimte
+## 4.6 Personal protective equipment (PPE) | 4.6 Persoonlijke beschermingsmiddelen (PBM)
+PPE not available | PBM niet beschikbaar
+PPE inadequate for task | PBM ongeschikt voor de taak
+PPE uncomfortable / not worn | PBM oncomfortabel / niet gedragen
+PPE maintenance deficient | Onderhoud PBM gebrekkig
+
+# Communication causes | Communicatie
+## 5.1 Communication content | 5.1 Inhoud communicatie
+Missing / no communication | Ontbrekende / geen communicatie
+Incomplete information provided | Onvolledige informatie verstrekt
+Inaccurate information | Onjuiste informatie
+Timing of communication wrong | Verkeerd moment van communicatie
+## 5.2 Communication method | 5.2 Communicatiemiddel
+Wrong medium (verbal vs written) | Verkeerd medium (mondeling vs schriftelijk)
+No confirmation of receipt | Geen ontvangstbevestiging
+Language / terminology barriers | Taal- / terminologiebarrières
+Communication not documented | Communicatie niet vastgelegd
+## 5.3 Communication chain | 5.3 Communicatieketen
+Information lost in handover | Informatie verloren bij overdracht
+Too many intermediaries | Te veel tussenschakels
+Shift turnover inadequate | Dienstoverdracht ontoereikend
+## 5.4 Organizational communication | 5.4 Organisatorische communicatie
+No defined communication channels | Geen vastgestelde communicatiekanalen
+Reporting structure unclear | Rapportagestructuur onduidelijk
+Silo effect between departments | Eilandvorming tussen afdelingen
+Feedback loop missing | Terugkoppelingslus ontbreekt
+## 5.5 Cultural / behavioral barriers | 5.5 Culturele / gedragsmatige barrières
+Reluctance to speak up / report | Terughoudendheid om te spreken / te melden
+Authority gradient (deference to seniority) | Gezagsverschil (ontzag voor senioriteit)
+Language / literacy issues | Taal- / geletterdheidsproblemen
+Cultural norms inhibit questioning | Culturele normen remmen het stellen van vragen
+
+# Management system causes | Managementsysteem
+## 6.1 Organizational culture | 6.1 Organisatiecultuur
+Safety / quality not prioritized | Veiligheid / kwaliteit geen prioriteit
+Production over safety culture | Productie gaat boven veiligheid
+Blame culture discourages reporting | Afrekencultuur ontmoedigt melden
+Normalization of deviance | Normalisering van afwijkingen
+Complacency | Zelfgenoegzaamheid
+## 6.2 Resource allocation | 6.2 Toewijzing van middelen
+Insufficient staffing | Onvoldoende bezetting
+Budget constraints affecting safety | Budgetbeperkingen raken de veiligheid
+Tooling / equipment not provided | Gereedschap / apparatuur niet verstrekt
+Time pressure / schedule conflicts | Tijdsdruk / planningsconflicten
+## 6.3 Policies / standards / rules | 6.3 Beleid / normen / regels
+No policy exists | Geen beleid aanwezig
+Policy inadequate or unclear | Beleid ontoereikend of onduidelijk
+Policy not enforced | Beleid niet gehandhaafd
+Conflicting policies | Tegenstrijdig beleid
+Policy not reviewed / updated | Beleid niet beoordeeld / bijgewerkt
+## 6.4 Oversight / supervision | 6.4 Toezicht / supervisie
+Supervision inadequate | Toezicht ontoereikend
+Work not inspected / reviewed | Werk niet gecontroleerd / beoordeeld
+Delegation without verification | Delegeren zonder verificatie
+Contractor oversight insufficient | Toezicht op aannemers onvoldoende
+## 6.5 Organizational learning | 6.5 Lerende organisatie
+Past incidents not learned from | Niet geleerd van eerdere incidenten
+Corrective actions not tracked | Corrigerende acties niet opgevolgd
+Lessons not shared across organization | Lessen niet gedeeld binnen de organisatie
+RCA recommendations not implemented | Aanbevelingen uit oorzaakanalyse niet uitgevoerd
+## 6.6 Accountability / discipline | 6.6 Verantwoording / discipline
+Roles and responsibilities unclear | Rollen en verantwoordelijkheden onduidelijk
+No consequences for rule violations | Geen gevolgen bij overtreding van regels
+Accountability not established | Verantwoordelijkheid niet vastgelegd
+## 6.7 Change management | 6.7 Wijzigingsbeheer
+Organizational change not managed | Organisatiewijziging niet beheerst
+Management of change (MOC) process absent | Geen management-of-change-proces (MOC)
+Personnel / process changes not assessed | Personele / proceswijzigingen niet beoordeeld
+Temporary changes become permanent | Tijdelijke wijzigingen worden permanent
+
+# Work direction / supervision causes | Werkaansturing / supervisie
+## 7.1 Work planning | 7.1 Werkvoorbereiding
+No work plan / job safety analysis | Geen werkplan / taakrisicoanalyse
+Plan inadequate for task complexity | Plan ontoereikend voor complexiteit van de taak
+Risk assessment not performed | Risicobeoordeling niet uitgevoerd
+Contingency planning missing | Geen plan voor onvoorziene situaties
+Plan not communicated to team | Plan niet gecommuniceerd aan het team
+## 7.2 Work scheduling / prioritization | 7.2 Werkplanning / prioritering
+Unrealistic deadlines | Onrealistische deadlines
+Too many concurrent tasks | Te veel gelijktijdige taken
+Sequence of work not optimized | Werkvolgorde niet geoptimaliseerd
+Interruptions / task switching | Onderbrekingen / wisselen van taak
+## 7.3 Work assignment / staffing | 7.3 Werktoewijzing / bezetting
+Wrong person assigned to task | Verkeerde persoon op de taak gezet
+Insufficient personnel for the job | Onvoldoende personeel voor het werk
+Skills not matched to task requirements | Vaardigheden sluiten niet aan op de taak
+New / inexperienced personnel without support | Nieuw / onervaren personeel zonder begeleiding
+## 7.4 Work supervision / direction | 7.4 Toezicht / aansturing van het werk
+Supervision absent during critical work | Geen toezicht tijdens kritisch werk
+Instructions unclear or incomplete | Instructies onduidelijk of onvolledig
+No verification of work in progress | Geen controle van lopend werk
+Work deviations not addressed | Afwijkingen in het werk niet aangepakt
+Micromanagement / excessive control | Micromanagement / overmatige controle
+## 7.5 Work coordination / handoff | 7.5 Werkcoördinatie / overdracht
+Between-shift coordination poor | Slechte afstemming tussen diensten
+Cross-department coordination missing | Geen afstemming tussen afdelingen
+Permit-to-work system failures | Falen van het werkvergunningsysteem
+Lockout / tagout coordination errors | Coördinatiefouten bij lockout / tagout
+## 7.6 Work quality / acceptance | 7.6 Werkkwaliteit / acceptatie
+Quality standards not defined | Kwaliteitsnormen niet vastgesteld
+Acceptance criteria unclear | Acceptatiecriteria onduidelijk
+Work not inspected before sign-off | Werk niet gecontroleerd vóór aftekening
+Rework / rejection process absent | Geen proces voor herstel / afkeur`},
+ soat:{name:'SOAT',text:`# Incident | Incident
 What happened | Wat is er gebeurd [textarea]
 Actual loss | Werkelijk verlies [textarea]
 Risk | Risico [kinney]
@@ -560,10 +950,18 @@ Group meetings and toolbox talks | Werkoverleg en toolboxmeetings
 General promotion and awareness | Algemene promotie en bewustwording
 Hiring and placement | Werving en plaatsing
 Purchasing and contractor controls | Inkoop- en aannemersbeheersing
-Off-the-job safety | Veiligheid buiten het werk`;
-
-function soatStarter(old){const q=parseQ(SOAT_TEXT,old||null);if(!old){q.id='soat';q.blocks.forEach(b=>b.items.forEach(i=>{if(!i.t)i.id='soat.'+i.id.split('.').pop();}));}q.name='SOAT';return q;}
+Off-the-job safety | Veiligheid buiten het werk`}
+};
+function starterQ(key,old){const q=parseQ(STARTERS[key].text,old||{id:key,name:STARTERS[key].name,blocks:[]});q.name=STARTERS[key].name;return q;}
+function allStarters(){return Object.keys(STARTERS).map(k=>starterQ(k));}
+function soatStarter(old){return starterQ('soat',old);}
 function blankQ(){const q=parseQ(`# ${t('general')}\n## ${t('general')}\n`,null);q.name=t('newQ');return q;}
+
+/* ---------- id remapping (numeric ids → content-stable ids; also used on import) ---------- */
+function remapQ(q){const nq=parseQ(qText(q),{id:q.id,name:q.name,blocks:[]});nq.name=q.name;const oi=qItems(q),ni=qItems(nq);const map={};oi.forEach((it,i)=>{if(ni[i]&&ni[i].id!==it.id)map[it.id]=ni[i].id;});return {q:nq,map};}
+function remapA(a,map){const mk={},vs={};for(const k in a.marks||{})mk[map[k]||k]=a.marks[k];for(const k in a.vals||{})vs[map[k]||k]=a.vals[k];a.marks=mk;a.vals=vs;}
+function remapAll(){const maps={};state.questionnaires=state.questionnaires.map(q=>{const r=remapQ(q);maps[q.id]=r.map;return r.q;});for(const p of state.projects)for(const a of p.analyses)if(maps[a.qid])remapA(a,maps[a.qid]);}
+function addMissingStarters(){const added=[];for(const k of Object.keys(STARTERS))if(!state.questionnaires.some(q=>q.id===k)){const q=starterQ(k);state.questionnaires.push(q);added.push(q);}return added;}
 
 /* ---------- Kinney & Wiruth ---------- */
 const KW={
@@ -578,8 +976,8 @@ function kwTextV(v){const k=kwScoreV(v);return k?`${v.w} × ${v.b} × ${v.e} = $
 /* ---------- state ---------- */
 const uid=()=>(SYNC&&SYNC.util&&SYNC.util.uid)?SYNC.util.uid():Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
 const today=()=>new Date().toISOString().slice(0,10);
-function fresh(){return {v:3,lang:'en',questionnaires:[],projects:[],ui:{view:'projects',pid:null,aid:null,step:'details',report:'exc'}};}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.v>=1&&s.v<=3)return s;}catch(e){}return null;}
+function fresh(){return {v:4,lang:'en',questionnaires:[],projects:[],ui:{view:'projects',pid:null,aid:null,step:'details',report:'exc'}};}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.v>=1&&s.v<=4)return s;}catch(e){}return null;}
 let state=load()||fresh();
 migrate();
 function migrate(){
@@ -601,7 +999,8 @@ function migrate(){
       delete a.description;delete a.lossDesc;delete a.kwW;delete a.kwB;delete a.kwE;}
     state.questionnaires.forEach(q=>delete q._mig);state.v=3;
   }
-  if(!state.questionnaires.length)state.questionnaires=[soatStarter()];
+  if(state.v===3){remapAll();if(!state.synced)addMissingStarters();state.v=4;}
+  if(!state.questionnaires.length&&!SYNC)state.questionnaires=allStarters();
   for(const p of state.projects)for(const a of p.analyses)a.vals=a.vals||{};
   save();
 }
@@ -623,7 +1022,7 @@ async function loadFromSync(){
   state.questionnaires=qs.map(r=>r.payload);
   const byP={};state.projects=ps.map(r=>{const p={...r.payload,analyses:[],updated:r.updatedAt};byP[p.id]=p;return p;});
   for(const r of as){const a=r.payload;a._u=r.updatedAt;const p=byP[a.pid];if(!p)continue;p.analyses.push(a);if(r.updatedAt>p.updated)p.updated=r.updatedAt;}
-  if(!state.questionnaires.length){const q=soatStarter();state.questionnaires=[q];await pQ(q);}
+  if(!state.questionnaires.length){state.questionnaires=allStarters();for(const q of state.questionnaires)await pQ(q);}
   for(const p of state.projects)for(const a of p.analyses)a.vals=a.vals||{};
 }
 let pendingRender=false;
@@ -646,6 +1045,11 @@ async function boot(){
         for(const a of p.analyses){a.pid=p.id;await SYNC.put(APP,'analyses',{id:a.id,payload:a,updatedAt:st},{keepStamp:true,silent:true});}}
     });
     await loadFromSync();
+    await SYNC.migrate('v2-stable-ids',async()=>{ // numeric item ids → content-stable ids, re-put everything so all devices converge
+      remapAll();addMissingStarters();
+      for(const q of state.questionnaires)await pQ(q);
+      for(const p of state.projects)for(const a of p.analyses)pA(a,p.id,true);
+    });
     SYNC.onChange(onRemoteChange);
     if(SYNC.onStatus)SYNC.onStatus(()=>{const el=document.getElementById('syncdot');if(el)el.textContent=syncLabel();});
     window.addEventListener('beforeunload',()=>{for(const id in aTimers){clearTimeout(aTimers[id]);}});
@@ -654,6 +1058,10 @@ async function boot(){
   save();render();
 }
 function flushNow(){for(const id in aTimers){clearTimeout(aTimers[id]);delete aTimers[id];for(const p of state.projects){const a=p.analyses.find(x=>x.id===id);if(a){own.add(a.id);SYNC.put(APP,'analyses',{id:a.id,payload:a});}}}}
+async function wipeAll(){
+  if(SYNC){for(const coll of ['questionnaires','projects','analyses']){const recs=await SYNC.list(APP,coll);for(const r of recs){own.add(r.id);await SYNC.del(APP,coll,r.id);}}}
+  state.projects=[];state.questionnaires=allStarters();state.ui={view:'projects',pid:null,aid:null,step:'details',report:'exc'};
+  if(SYNC)for(const q of state.questionnaires)await pQ(q);save();render();toast(t('saved'));}
 function syncLabel(){if(!SYNC)return '';try{const s=SYNC.status();const n=(s.connections||[]).length;return (s.leaderPresent||s.leader?'●':'○')+(n?' '+n:'');}catch(e){return '';}}
 const proj=()=>state.projects.find(p=>p.id===state.ui.pid);
 const ana=()=>{const p=proj();return p&&p.analyses.find(a=>a.id===state.ui.aid);};
@@ -827,14 +1235,14 @@ function vSettings(){
   const cards=state.questionnaires.map(q=>`<div class="qcard" data-q="${q.id}">
     <div class="row"><label class="f grow" style="max-width:360px"><span>${t('qName')}</span><input type="text" data-qname="${q.id}" value="${esc(q.name)}"></label>
      <span class="small muted">${qItems(q).length} items · ${q.blocks.length} ${state.lang==='nl'?'blokken':'blocks'}</span><div class="grow"></div>
-     <button class="primary" data-qsave="${q.id}">${t('save')}</button>${q.id==='soat'?`<button data-qrestore="${q.id}">${t('restoreSoat')}</button>`:''}<button class="danger" data-qdel="${q.id}">${t('del')}</button></div>
+     <button class="primary" data-qsave="${q.id}">${t('save')}</button>${STARTERS[q.id]?`<button data-qrestore="${q.id}">${t('restoreQ')}</button>`:''}<button class="danger" data-qdel="${q.id}">${t('del')}</button></div>
     <textarea data-qtext="${q.id}" spellcheck="false">${esc(qText(q))}</textarea></div>`).join('');
   return `<div class="stack">
    <h1>${t('settings')}</h1>
    <h2>${t('langTitle')}</h2><div class="seg"><button data-lang="en" class="${state.lang==='en'?'on':''}">English</button><button data-lang="nl" class="${state.lang==='nl'?'on':''}">Nederlands</button></div>
-   <h2>${t('dataTitle')}</h2><div class="row"><button data-export-all>${t('exportAll')}</button><button id="importBtn">${t('importFile')}</button>${SYNC?`<button data-sync>⇄ ${t('sync')}</button>`:''}<span class="small muted">${SYNC?t('syncSame'):t('storage')}</span></div>
+   <h2>${t('dataTitle')}</h2><div class="row"><button data-export-all>${t('exportAll')}</button><button id="importBtn">${t('importFile')}</button>${SYNC?`<button data-sync>⇄ ${t('sync')}</button>`:''}<button class="danger" data-wipe>${t('wipe')}</button><span class="small muted">${SYNC?t('syncSame'):t('storage')}</span></div>
    <h2>${t('kw')}</h2>${kwTable()}
-   <div class="row"><h2 class="grow">${t('questionnaires')}</h2><button id="addQ">${t('addQ')}</button>${state.questionnaires.some(q=>q.id==='soat')?'':`<button data-qrestore="soat">${t('restoreSoat')}</button>`}</div>
+   <div class="row"><h2 class="grow">${t('questionnaires')}</h2><button id="addQ">${t('addQ')}</button>${Object.keys(STARTERS).filter(k=>!state.questionnaires.some(q=>q.id===k)).map(k=>`<button data-qrestore="${k}">${t('restoreQ')} ${STARTERS[k].name}</button>`).join('')}</div>
    <div class="help">${t('qHelp')}</div>
    ${cards}
   </div>`;
@@ -855,8 +1263,13 @@ function importJSON(text){
   if(d.v===1||d.v===2){ // convert an older export in place using the same migration
     const s=state;state={v:d.v,lang:s.lang,taxonomy:d.taxonomy,questionnaires:d.questionnaires||[],projects:d.projects,ui:s.ui};migrate();d={questionnaires:state.questionnaires,projects:state.projects};state=s;}
   let n=0;
-  for(const q of d.questionnaires||[]){const i=state.questionnaires.findIndex(x=>x.id===q.id);
-    if(i<0){state.questionnaires.push(q);pQ(q);}else if(JSON.stringify(state.questionnaires[i])!==JSON.stringify(q)&&confirm(t('replaceQ',{n:q.name}))){state.questionnaires[i]=q;pQ(q);}}
+  const maps={};
+  for(const q0 of d.questionnaires||[]){const i=state.questionnaires.findIndex(x=>x.id===q0.id);
+    if(i<0){const r=remapQ(q0);maps[q0.id]=r.map;state.questionnaires.push(r.q);pQ(r.q);continue;}
+    const loc=state.questionnaires[i];const byEn=new Map();qItems(loc).forEach(it=>{if(!byEn.has(it.en))byEn.set(it.en,it.id);});
+    const map={};qItems(q0).forEach(it=>{const id=byEn.get(it.en);if(id&&id!==it.id)map[it.id]=id;});maps[q0.id]=map;
+    if(qText(loc)!==qText(q0)&&confirm(t('replaceQ',{n:q0.name}))){const r=remapQ(q0);state.questionnaires[i]=r.q;pQ(r.q);const m2={...map};for(const k in r.map)m2[k]=r.map[k];maps[q0.id]=m2;}}
+  for(const p of d.projects)for(const a of p.analyses||[])if(maps[a.qid])remapA(a,maps[a.qid]);
   for(const p of d.projects){if(!p.id||!p.analyses)continue;
     const i=state.projects.findIndex(x=>x.id===p.id);
     if(i>=0){if(!confirm(t('replaceProject',{n:p.name})))continue;for(const a of state.projects[i].analyses)if(!p.analyses.some(x=>x.id===a.id))dA(a);state.projects[i]=p;}else state.projects.push(p);n++;
@@ -880,7 +1293,7 @@ function setStep(s){state.ui.step=s;state.ui.openC=null;save();render();}
 /* ---------- events ---------- */
 const app=document.getElementById('app');
 document.body.addEventListener('click',e=>{
-  const b=e.target.closest('[data-go],[data-lang],[data-step],[data-rep],[data-open-p],[data-del-p],[data-open-a],[data-rep-a],[data-dup-a],[data-del-a],[data-export-p],[data-export-all],[data-qsave],[data-qdel],[data-qrestore],[data-sync],#newAna,#importBtn,#addQ,.item,.cb');
+  const b=e.target.closest('[data-go],[data-lang],[data-step],[data-rep],[data-open-p],[data-del-p],[data-open-a],[data-rep-a],[data-dup-a],[data-del-a],[data-export-p],[data-export-all],[data-qsave],[data-qdel],[data-qrestore],[data-sync],[data-wipe],#newAna,#importBtn,#addQ,.item,.cb');
   if(!b)return;const d=b.dataset;
   if(b.classList.contains('cb')){e.stopPropagation();toggleComment(d.c);return;}
   if(b.classList.contains('item')){cycle(d.id);b.focus();return;}
@@ -899,7 +1312,8 @@ document.body.addEventListener('click',e=>{
   if(d.exportAll!==undefined){exportAll();return;}
   if(d.qsave){saveQ(d.qsave);return;}
   if(d.qdel){if(confirm(t('confirmDelQ'))){const q=state.questionnaires.find(x=>x.id===d.qdel);state.questionnaires=state.questionnaires.filter(x=>x.id!==d.qdel);if(q)dQ(q);if(!state.questionnaires.length){const nq=blankQ();state.questionnaires=[nq];pQ(nq);}render();}return;}
-  if(d.qrestore){const i=state.questionnaires.findIndex(q=>q.id==='soat');let q;if(i<0){q=soatStarter();state.questionnaires.unshift(q);}else{if(!confirm(t('confirmRestore')))return;q=soatStarter(state.questionnaires[i]);state.questionnaires[i]=q;}pQ(q);render();toast(t('saved'));return;}
+  if(d.qrestore){const k=d.qrestore;const i=state.questionnaires.findIndex(q=>q.id===k);let q;if(i<0){q=starterQ(k);state.questionnaires.push(q);}else{if(!confirm(t('confirmRestore')))return;q=starterQ(k,state.questionnaires[i]);state.questionnaires[i]=q;}pQ(q);render();toast(t('saved'));return;}
+  if(d.wipe!==undefined){if(!confirm(t('confirmWipe')))return;wipeAll();return;}
   if(b.id==='addQ'){const q=blankQ();state.questionnaires.push(q);pQ(q);render();return;}
   if(b.id==='newAna'){const p=proj();const sel=document.getElementById('newQsel');const qid=sel?sel.value:state.questionnaires[0].id;const a=newAnalysis(p,qid);go('analysis',{aid:a.id,step:'details'});return;}
   if(b.id==='importBtn'){document.getElementById('importFile').click();return;}
