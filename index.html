@@ -1356,5 +1356,6 @@ function setPrintOrientation(){let s=document.getElementById('pp');if(!s){s=docu
 
 boot();
 </script>
+<script>/* offline shell: see sw.js */ if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(e=>console.warn("sw",e));</script>
 </body>
 </html>
