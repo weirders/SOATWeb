@@ -1094,7 +1094,7 @@ function renderTop(){
   if(state.ui.view==='settings')crumbs+=`<span>›</span><b>${t('settings')}</b>`;
   document.getElementById('top').innerHTML=`<div class="brand">${t('appName')}</div><div class="crumbs">${crumbs}</div>
    <div class="seg"><button data-lang="en" class="${state.lang==='en'?'on':''}">EN</button><button data-lang="nl" class="${state.lang==='nl'?'on':''}">NL</button></div>
-   ${SYNC?`<button data-sync title="${t('sync')}">⇄ <span id="syncdot">${syncLabel()}</span></button>`:''}<button data-go="settings" title="${t('settings')}">⚙</button>`;
+   ${SYNC?`<button data-sync data-sfha-badge title="${t('sync')}">⇄ <span id="syncdot">${syncLabel()}</span></button>`:''}<button data-go="settings" title="${t('settings')}">⚙</button>`;
 }
 const aTitle=a=>{for(const f of qFields(qOf(a)))if((f.f==='text'||f.f==='textarea')&&a.vals[f.id])return String(a.vals[f.id]);return '';};
 const short=(s,n=48)=>{s=(s||'').trim().split('\n')[0];return s.length>n?s.slice(0,n-1)+'…':s;};
