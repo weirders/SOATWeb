@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SOAT / SCAT</title>
+<title>CheckFlow</title>
 <style>
 :root{
   --ink:#1B2430; --paper:#FFFFFF; --muted:#66707C; --line:#D8DDE3; --rail:#F2F4F6; --hover:#F7F8FA;
@@ -73,11 +73,12 @@ table.list tr.click:hover{background:var(--hover)}
 .grp.l3{padding:10px 8px 3px 16px;color:var(--muted)}
 .grp.l4{padding:8px 8px 2px 24px;color:var(--muted);font-weight:500;font-style:italic}
 .grp.l5{padding:6px 8px 2px 32px;color:var(--muted);font-weight:500;font-style:italic;font-size:12px}
-.item{display:grid;grid-template-columns:44px 1fr 40px;align-items:center;min-height:var(--row);border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.item{display:grid;grid-template-columns:44px 1fr auto;align-items:center;min-height:var(--row);border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
 .item:hover{background:var(--hover)}
 .item .st{height:var(--row);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--na)}
 .item .tx{padding:6px 6px 6px 0}
-.item .cb{height:var(--row);display:flex;align-items:center;justify-content:center;color:var(--muted);opacity:.45}
+.item .cb{height:var(--row);min-width:40px;padding:0 8px;gap:3px;display:flex;align-items:center;justify-content:center;color:var(--muted);opacity:.45;white-space:nowrap}
+.item .cb small{font-size:11px}
 .item:hover .cb{opacity:1}
 .item.s1{background:var(--mark-bg)}
 .item.s1 .st{color:var(--mark)}
@@ -125,6 +126,31 @@ table.rt.dense td{padding:1px 5px;line-height:1.3}
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:4px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 
+/* photos */
+.phsec{margin-top:20px}
+.phbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.cmt .phbar button{padding:3px 9px;font-size:13px}
+.phs{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}
+.ph{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;min-width:0}
+.ph img{display:block;width:100%;height:100px;object-fit:cover;background:var(--rail);cursor:zoom-in}
+.ph input[type=text]{border:0;border-top:1px solid var(--line);border-radius:0;font-size:12px;padding:4px 6px}
+.ph .pb{position:absolute;top:4px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(27,36,48,.72);color:#fff;padding:0;font-size:13px;line-height:1}
+.ph .pb:hover{background:rgba(27,36,48,.9)}
+.ph .pb.ed{left:4px}.ph .pb.rm{right:4px}
+.rph{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;white-space:normal}
+.rph figure{margin:0;width:150px}
+.rph img{display:block;width:150px;height:112px;object-fit:contain;background:var(--rail);border:1px solid var(--line);border-radius:3px;cursor:zoom-in}
+.rph figcaption{font-size:11px;color:var(--muted);line-height:1.3;margin-top:2px}
+.rph.big figure{width:230px}.rph.big img{width:230px;height:172px}
+#lb{position:fixed;inset:0;z-index:50;background:#0d1419;display:flex;flex-direction:column;color:#fff}
+#lb .lbt{display:flex;gap:8px;align-items:center;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px))}
+#lb .lbt button{background:#1d2a33;color:#fff;border-color:#33434f;min-width:40px}
+#lb .lbt button:disabled{opacity:.35}
+#lb .lbs{flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center}
+#lb img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in}
+#lb.z .lbs{display:block}#lb.z img{max-width:none;max-height:none;cursor:zoom-out}
+#lb .lbc{padding:8px 12px calc(14px + env(safe-area-inset-bottom,0px));text-align:center;font-size:13px;color:#c8d3db;min-height:20px}
+
 @media (max-width:760px){
   .an{grid-template-columns:1fr}
   .rail{position:static;display:flex;flex-wrap:wrap;gap:4px}
@@ -138,7 +164,8 @@ table.rt.dense td{padding:1px 5px;line-height:1.3}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 
 @media print{
-  .top,.noprint,.toast{display:none!important}
+  .top,.noprint,.toast,#lb{display:none!important}
+  .rph figure{break-inside:avoid}
   body{font-size:11.5px}
   main{padding:0;max-width:none}
   .rp .rhead{border-color:#999}
@@ -158,8 +185,11 @@ table.rt.dense td{padding:1px 5px;line-height:1.3}
 <main id="app"></main>
 <div class="toast" id="toast"></div>
 <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+<input type="file" id="phCam" accept="image/*" capture="environment" class="hidden">
+<input type="file" id="phGal" accept="image/*" multiple class="hidden">
 
 <script src="https://weirders.github.io/ToolDeck/sync.v1.js"></script>
+<script src="https://weirders.github.io/ToolDeck/photo-editor.v1.js"></script>
 <script>
 'use strict';
 const KEY='soat_scat_v1';
@@ -169,7 +199,7 @@ const SYNC=window.SfhaSync||null; // absent → standalone mode, localStorage on
 /* ---------- i18n ---------- */
 const I18N={
 en:{
- appName:'SOAT / SCAT', projects:'Projects', newProject:'New project', projectName:'Project name', site:'Site / department',
+ appName:'CheckFlow', projects:'Projects', newProject:'New project', projectName:'Project name', site:'Site / department',
  analyses:'Analyses', newAnalysis:'New analysis', report:'Report', summary:'Project summary', del:'Delete',
  confirmDel:'Delete permanently? This cannot be undone.', back:'Back', details:'Details', date:'Date',
  analyst:'Analyst', status:'Status', draft:'Draft', final:'Final',
@@ -192,10 +222,13 @@ en:{
  storage:'Data is stored in this browser only. Export regularly to keep a backup.', dataTitle:'Data', langTitle:'Interface language',
  noMarks:'Nothing has been marked in this project yet.', goReport:'Open report', general:'General', newQ:'New questionnaire',
  kw:'Kinney & Wiruth', kwW:'Probability (W)', kwB:'Exposure (B)', kwE:'Effect (E)', kwR:'Risk score R = W × B × E', kwNone:'— not set —', kwClassH:'Risk class',
+ photos:'Photos', photosHint:'General photos that clarify this checklist. Tap ✏️ to mark up or blur.', camera:'📷 Camera', gallery:'🖼️ Gallery', caption:'Caption', editPhoto:'Mark up / edit',
+ delPhoto:'Delete this photo?', phPending:'The full-size photo has not synced to this device yet.', phNoSync:'Photos need the shared storage layer. Open CheckFlow online once, then photos work offline too.',
+ phEditor:'Photo editor not loaded. Open CheckFlow online once, then it works offline.', phAdding:'Adding photo…', phErr:'Could not add photo: ', close:'Close', removedPh:'(photos of a removed item)',
  kwClass:['Very high risk – stop the activity','High risk – immediate action required','Substantial risk – corrective action needed','Possible risk – attention required','Slight risk – acceptable']
 },
 nl:{
- appName:'SOAT / SCAT', projects:'Projecten', newProject:'Nieuw project', projectName:'Projectnaam', site:'Locatie / afdeling',
+ appName:'CheckFlow', projects:'Projecten', newProject:'Nieuw project', projectName:'Projectnaam', site:'Locatie / afdeling',
  analyses:'Analyses', newAnalysis:'Nieuwe analyse', report:'Rapport', summary:'Projectoverzicht', del:'Verwijderen',
  confirmDel:'Definitief verwijderen? Dit kan niet ongedaan worden gemaakt.', back:'Terug', details:'Gegevens', date:'Datum',
  analyst:'Analist', status:'Status', draft:'Concept', final:'Definitief',
@@ -218,6 +251,9 @@ nl:{
  storage:'Gegevens worden alleen in deze browser opgeslagen. Exporteer regelmatig als back-up.', dataTitle:'Gegevens', langTitle:'Taal van de interface',
  noMarks:'In dit project is nog niets gemarkeerd.', goReport:'Rapport openen', general:'Algemeen', newQ:'Nieuwe vragenlijst',
  kw:'Kinney & Wiruth', kwW:'Waarschijnlijkheid (W)', kwB:'Blootstelling (B)', kwE:'Effect (E)', kwR:'Risicoscore R = W × B × E', kwNone:'— niet ingevuld —', kwClassH:'Risicoklasse',
+ photos:'Foto\'s', photosHint:'Algemene foto\'s ter verduidelijking van deze checklist. Tik ✏️ om te markeren of te vervagen.', camera:'📷 Camera', gallery:'🖼️ Galerij', caption:'Bijschrift', editPhoto:'Markeren / bewerken',
+ delPhoto:'Deze foto verwijderen?', phPending:'De foto op volle grootte is nog niet naar dit apparaat gesynchroniseerd.', phNoSync:'Foto\'s hebben de gedeelde opslaglaag nodig. Open CheckFlow één keer online, daarna werken foto\'s ook offline.',
+ phEditor:'Foto-editor niet geladen. Open CheckFlow één keer online, daarna werkt hij offline.', phAdding:'Foto toevoegen…', phErr:'Foto toevoegen mislukt: ', close:'Sluiten', removedPh:'(foto\'s van een verwijderd item)',
  kwClass:['Zeer hoog risico – activiteit stoppen','Hoog risico – onmiddellijke maatregelen','Aanzienlijk risico – correctie vereist','Mogelijk risico – aandacht vereist','Licht risico – aanvaardbaar']
 }};
 const t=(k,v)=>{let s=(I18N[state.lang]&&I18N[state.lang][k])??I18N.en[k]??k; if(v)for(const q in v)s=s.replace('{'+q+'}',v[q]); return s;};
@@ -1012,11 +1048,11 @@ const pPayload=p=>({id:p.id,name:p.name,site:p.site,created:p.created,lastQ:p.la
 async function pQ(q){save();if(!SYNC)return;own.add(QREC(q));await SYNC.put(APP,'questionnaires',{id:QREC(q),payload:q});}
 async function dQ(q){save();if(!SYNC)return;own.add(QREC(q));await SYNC.del(APP,'questionnaires',QREC(q));}
 async function pP(p){save();if(!SYNC)return;own.add(p.id);await SYNC.put(APP,'projects',{id:p.id,payload:pPayload(p)});}
-async function dP(p){save();if(!SYNC)return;own.add(p.id);await SYNC.del(APP,'projects',p.id);for(const a of p.analyses){own.add(a.id);await SYNC.del(APP,'analyses',a.id);}}
+async function dP(p){save();if(!SYNC)return;own.add(p.id);await SYNC.del(APP,'projects',p.id);for(const a of p.analyses){own.add(a.id);await SYNC.del(APP,'analyses',a.id);await phDelFor(a.id);}}
 const aTimers={};
 function pA(a,pid,now){save();if(!SYNC)return;a.pid=pid||a.pid;const f=async()=>{delete aTimers[a.id];own.add(a.id);await SYNC.put(APP,'analyses',{id:a.id,payload:a});};
   clearTimeout(aTimers[a.id]);if(now)f();else aTimers[a.id]=setTimeout(f,400);}
-async function dA(a){save();if(!SYNC)return;clearTimeout(aTimers[a.id]);own.add(a.id);await SYNC.del(APP,'analyses',a.id);}
+async function dA(a){save();if(!SYNC)return;clearTimeout(aTimers[a.id]);own.add(a.id);await SYNC.del(APP,'analyses',a.id);await phDelFor(a.id);}
 async function loadFromSync(){
   const qs=await SYNC.list(APP,'questionnaires'),ps=await SYNC.list(APP,'projects'),as=await SYNC.list(APP,'analyses');
   state.questionnaires=qs.map(r=>r.payload);
@@ -1024,6 +1060,7 @@ async function loadFromSync(){
   for(const r of as){const a=r.payload;a._u=r.updatedAt;const p=byP[a.pid];if(!p)continue;p.analyses.push(a);if(r.updatedAt>p.updated)p.updated=r.updatedAt;}
   if(!state.questionnaires.length){state.questionnaires=allStarters();for(const q of state.questionnaires)await pQ(q);}
   for(const p of state.projects)for(const a of p.analyses)a.vals=a.vals||{};
+  photos=PHOK?(await SYNC.list(APP,'photos')).map(r=>r.payload):[];
 }
 let pendingRender=false;
 function onRemoteChange(ch){
@@ -1059,8 +1096,8 @@ async function boot(){
 }
 function flushNow(){for(const id in aTimers){clearTimeout(aTimers[id]);delete aTimers[id];for(const p of state.projects){const a=p.analyses.find(x=>x.id===id);if(a){own.add(a.id);SYNC.put(APP,'analyses',{id:a.id,payload:a});}}}}
 async function wipeAll(){
-  if(SYNC){for(const coll of ['questionnaires','projects','analyses']){const recs=await SYNC.list(APP,coll);for(const r of recs){own.add(r.id);await SYNC.del(APP,coll,r.id);}}}
-  state.projects=[];state.questionnaires=allStarters();state.ui={view:'projects',pid:null,aid:null,step:'details',report:'exc'};
+  if(SYNC){for(const coll of ['questionnaires','projects','analyses','photos']){const recs=await SYNC.list(APP,coll);for(const r of recs){own.add(r.id);await SYNC.del(APP,coll,r.id);}}}
+  state.projects=[];photos=[];state.questionnaires=allStarters();state.ui={view:'projects',pid:null,aid:null,step:'details',report:'exc'};
   if(SYNC)for(const q of state.questionnaires)await pQ(q);save();render();toast(t('saved'));}
 function syncLabel(){if(!SYNC)return '';try{const s=SYNC.status();const n=(s.connections||[]).length;return (s.leaderPresent||s.leader?'●':'○')+(n?' '+n:'');}catch(e){return '';}}
 const proj=()=>state.projects.find(p=>p.id===state.ui.pid);
@@ -1070,14 +1107,83 @@ const name=it=>(state.lang==='nl'&&it.nl)?it.nl:it.en;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mark=(a,id)=>a.marks[id]||{s:0,c:''};
 const isDev=m=>m.s===1||!!(m.c&&m.c.trim());
+const phN=(a,id)=>PHOK?photos.reduce((n,p)=>n+(p.aid===a.id&&p.tg===id?1:0),0):0;
+const hasCmt=(a,id,m)=>!!(m.c&&m.c.trim())||phN(a,id)>0;
 const GL=['–','●'];
 
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),1600);}
 function go(view,extra){Object.assign(state.ui,{view},extra||{});save();render();window.scrollTo(0,0);}
 
+/* ---------- photos ----------
+   sfha-sync collection 'photos', one record per photo:
+     {id, aid, tg:'details'|itemId, hash, base:{hash}, thumb, ann, scale, caption, w, h, created}
+   `hash` = annotated JPEG (reports, lightbox), `base.hash` = unannotated image (blur burned in) so the
+   markup stays re-editable — both are nested `hash` fields, so both travel as sync assets.
+   `thumb` is an inline 480 px JPEG data URL. Editing uses the shared ToolDeck/photo-editor.v1.js. */
+let photos=[];
+const PHOK=!!(SYNC&&SYNC.putAsset);
+const phFor=(aid,tg)=>photos.filter(p=>p.aid===aid&&(tg===undefined||p.tg===tg)).sort((x,y)=>(x.created||'').localeCompare(y.created||''));
+const phById=id=>photos.find(p=>p.id===id);
+async function phPut(p){const i=photos.findIndex(x=>x.id===p.id);if(i<0)photos.push(p);else photos[i]=p;own.add(p.id);await SYNC.put(APP,'photos',{id:p.id,payload:p});}
+async function phDel(p){photos=photos.filter(x=>x.id!==p.id);own.add(p.id);await SYNC.del(APP,'photos',p.id);}
+async function phDelFor(aid){if(!PHOK)return;for(const p of phFor(aid))await phDel(p);}
+const assetUrls=new Map();
+async function assetUrl(h){if(!h)return '';if(assetUrls.has(h))return assetUrls.get(h);const b=await SYNC.getAsset(h).catch(()=>null);if(!b)return '';const u=URL.createObjectURL(b);assetUrls.set(h,u);return u;}
+const loadImg=src=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('not an image'));im.src=src;});
+const toJpeg=(c,q)=>new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('encode failed')),'image/jpeg',q));
+function fit(src,max){const w=src.naturalWidth||src.width,h=src.naturalHeight||src.height,k=Math.min(1,max/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c;}
+const blobToDataUrl=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b);});
+const dataUrlToBlob=u=>fetch(u).then(r=>r.blob());
+async function phFromFile(file,aid,tg){const u=URL.createObjectURL(file);
+  try{const c=fit(await loadImg(u),2400);const hash=await SYNC.putAsset(await toJpeg(c,.86));
+    await phPut({id:uid(),aid,tg,hash,base:{hash},thumb:fit(c,480).toDataURL('image/jpeg',.8),ann:[],scale:null,caption:'',w:c.width,h:c.height,created:new Date().toISOString()});}
+  finally{URL.revokeObjectURL(u);}}
+let phTarget=null;
+function phPick(tg,cam){if(!PHOK){toast(t('phNoSync'));return;}phTarget={aid:state.ui.aid,tg};document.getElementById(cam?'phCam':'phGal').click();}
+async function phFiles(e){const files=[...e.target.files];e.target.value='';const tg=phTarget;phTarget=null;if(!tg||!files.length)return;toast(t('phAdding'));
+  for(const f of files){try{await phFromFile(f,tg.aid,tg.tg);}catch(err){toast(t('phErr')+(err.message||err));}}
+  if(tg.tg!=='details'&&state.ui.aid===tg.aid)state.ui.openC=tg.tg;touch();render();}
+async function phEdit(id){const p=phById(id);if(!p)return;if(!window.SfhaPhotoEditor){toast(t('phEditor'));return;}
+  const src=await assetUrl((p.base&&p.base.hash)||p.hash);if(!src){toast(t('phPending'));return;}
+  SfhaPhotoEditor.open({src,ann:p.ann||[],scale:p.scale||null,lang:state.lang,caption:p.caption||'',captionPlaceholder:t('caption'),thumbSize:480,deleteConfirm:t('delPhoto'),
+    onSave:async r=>{const cur=phById(id)||p;const hash=await SYNC.putAsset(r.full),bh=await SYNC.putAsset(r.base);
+      await phPut({...cur,hash,base:{hash:bh},thumb:r.thumb,ann:r.ann,scale:r.scale,caption:r.caption??cur.caption,w:r.width,h:r.height});touch();render();},
+    onDelete:async()=>{await phDel(phById(id)||p);touch();render();}});}
+function phGrid(a,tg){if(!PHOK)return '';const ps=phFor(a.id,tg);
+  return (ps.length?`<div class="phs">${ps.map(p=>`<div class="ph"><img src="${esc(p.thumb)}" alt="${esc(p.caption||t('photos'))}" data-ph-view="${p.id}"><button type="button" class="pb ed" data-ph-edit="${p.id}" title="${t('editPhoto')}">✏️</button><button type="button" class="pb rm" data-ph-del="${p.id}" title="${t('del')}">✕</button><input type="text" data-ph-cap="${p.id}" value="${esc(p.caption||'')}" placeholder="${t('caption')}"></div>`).join('')}</div>`:'')
+   +`<div class="phbar"><button type="button" data-ph-add="${esc(tg)}" data-cam="1">${t('camera')}</button><button type="button" data-ph-add="${esc(tg)}">${t('gallery')}</button></div>`;}
+function rPhotos(a,tg,cls){if(!PHOK)return '';const ps=phFor(a.id,tg);if(!ps.length)return '';
+  return `<div class="rph ${cls||''}">${ps.map(p=>`<figure><img src="${esc(p.thumb)}" alt="" data-ph-view="${p.id}">${p.caption?`<figcaption>${esc(p.caption)}</figcaption>`:''}</figure>`).join('')}</div>`;}
+/* lightbox: full-size view with prev/next, swipe, tap to zoom; Back closes it */
+let lb=null,lbAfterPop=null;
+function phView(id){const p=phById(id);if(!p)return;const list=phFor(p.aid,p.tg);lbOpen(list,Math.max(0,list.findIndex(x=>x.id===id)));}
+function lbOpen(list,i){if(lb)return;const el=document.createElement('div');el.id='lb';
+  el.innerHTML=`<div class="lbt"><button data-lb="x">✕ ${t('close')}</button><span class="grow"></span><span class="lbn small"></span><button data-lb="p" aria-label="‹">‹</button><button data-lb="n" aria-label="›">›</button><button data-lb="e" title="${t('editPhoto')}">✏️</button></div><div class="lbs"><img alt=""></div><div class="lbc"></div>`;
+  document.body.appendChild(el);lb={el,list,i,tok:0,pushed:false};try{history.pushState({cfLightbox:1},'');lb.pushed=true;}catch(e){}
+  el.onclick=e=>{const b=e.target.closest('[data-lb]');if(b){const k=b.dataset.lb;if(k==='x')lbClose();else if(k==='p')lbGo(-1);else if(k==='n')lbGo(1);else if(k==='e'){const id=lb.list[lb.i].id;lbClose().then(()=>phEdit(id));}return;}
+    if(e.target.tagName==='IMG'&&!lb.swiped)el.classList.toggle('z');};
+  const st=el.querySelector('.lbs');let sx=null;
+  st.onpointerdown=e=>{sx=el.classList.contains('z')?null:e.clientX;lb.swiped=false;};
+  st.onpointerup=e=>{if(sx==null)return;const dx=e.clientX-sx;sx=null;if(Math.abs(dx)>60){lb.swiped=true;lbGo(dx<0?1:-1);}};
+  lbShow();}
+async function lbShow(){const l=lb;if(!l)return;const p=l.list[l.i],img=l.el.querySelector('img'),tok=++l.tok;l.el.classList.remove('z');img.src=p.thumb;
+  l.el.querySelector('.lbc').textContent=p.caption||'';l.el.querySelector('.lbn').textContent=l.list.length>1?`${l.i+1} / ${l.list.length}`:'';
+  l.el.querySelector('[data-lb=p]').disabled=l.i<=0;l.el.querySelector('[data-lb=n]').disabled=l.i>=l.list.length-1;
+  const u=await assetUrl(p.hash);if(u&&lb===l&&l.tok===tok)img.src=u;}
+function lbGo(d){if(!lb)return;const j=lb.i+d;if(j<0||j>=lb.list.length)return;lb.i=j;lbShow();}
+function lbClose(){return new Promise(res=>{if(!lb)return res();const l=lb;lb=null;l.el.remove();
+  if(!l.pushed)return res();lbAfterPop=res;setTimeout(()=>{if(lbAfterPop===res){lbAfterPop=null;res();}},600);try{history.back();}catch(e){lbAfterPop=null;res();}});}
+window.addEventListener('popstate',()=>{if(lbAfterPop){const f=lbAfterPop;lbAfterPop=null;f();return;}if(lb){lb.pushed=false;lbClose();}});
+document.addEventListener('keydown',e=>{if(!lb)return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();lbClose();}else if(e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();lbGo(1);}else if(e.key==='ArrowLeft'){e.preventDefault();e.stopPropagation();lbGo(-1);}},true);
+async function phExport(aids){const out=[];if(!PHOK)return out;
+  for(const p of photos.filter(x=>aids.has(x.aid))){const b=await SYNC.getAsset(p.hash).catch(()=>null);const bh=p.base&&p.base.hash;const bb=bh&&bh!==p.hash?await SYNC.getAsset(bh).catch(()=>null):null;
+    out.push({...p,dataUrl:b?await blobToDataUrl(b):p.thumb,baseDataUrl:bb?await blobToDataUrl(bb):undefined});}return out;}
+async function phImport(list,aids){if(!PHOK)return;for(const x of list||[]){if(!x||!x.id||!aids.has(x.aid)||!x.dataUrl)continue;
+  try{const {dataUrl,baseDataUrl,...p}=x;const hash=await SYNC.putAsset(await dataUrlToBlob(dataUrl));const bh=baseDataUrl?await SYNC.putAsset(await dataUrlToBlob(baseDataUrl)):hash;await phPut({...p,hash,base:{hash:bh}});}catch(e){console.warn('photo import',e);}}}
+
 /* ---------- counts ---------- */
 const hasVal=v=>v!==undefined&&v!==null&&v!==''&&!(Array.isArray(v)&&!v.length)&&!(typeof v==='object'&&!Array.isArray(v)&&!(v.w||v.b||v.e));
-function blockCounts(a,b){let m=0,c=0,tot=0;for(const it of b.items){if(it.t)continue;tot++;if(it.f){if(hasVal(a.vals[it.id]))m++;continue;}const k=mark(a,it.id);if(k.s===1)m++;if(k.c&&k.c.trim())c++;}return {m,c,tot};}
+function blockCounts(a,b){let m=0,c=0,tot=0;for(const it of b.items){if(it.t)continue;tot++;if(it.f){if(hasVal(a.vals[it.id]))m++;continue;}const k=mark(a,it.id);if(k.s===1)m++;if(hasCmt(a,it.id,k))c++;}return {m,c,tot};}
 function devCount(a){return Object.values(a.marks).filter(isDev).length;}
 function cntHtml(c){return `<b>${c.m}</b>${c.c?' ✎'+c.c:''}<span class="muted">/${c.tot}</span>`;}
 
@@ -1143,13 +1249,14 @@ function vDetails(a,q){
    <label class="f"><span>${t('site')}</span><input type="text" data-f="site" value="${esc(a.site||'')}"></label>
    <label class="f"><span>${t('analyst')}</span><input type="text" data-f="analyst" value="${esc(a.analyst||'')}"></label>
    <label class="f"><span>${t('status')}</span><select data-f="status"><option value="draft" ${a.status!=='final'?'selected':''}>${t('draft')}</option><option value="final" ${a.status==='final'?'selected':''}>${t('final')}</option></select></label>
-  </div>`;
+  </div>
+  <div class="phsec"><h3>${t('photos')}</h3><p class="small muted" style="margin:2px 0 0">${PHOK?t('photosHint'):t('phNoSync')}</p>${phGrid(a,'details')}</div>`;
 }
 function itemRow(a,it){
-  const m=mark(a,it.id),open=state.ui.openC===it.id;
-  return `<div class="item s${m.s} ${m.c&&m.c.trim()?'hc':''}" tabindex="0" data-id="${it.id}" role="button" aria-pressed="${m.s===1}">
-    <span class="st">${GL[m.s]}</span><span class="tx">${esc(name(it))}</span><span class="cb" data-c="${it.id}" title="${t('comment')}">✎</span></div>
-   <div class="cmt ${open?'':'hidden'}" data-cw="${it.id}"><textarea data-cm="${it.id}" placeholder="${t('commentPh')}">${esc(m.c||'')}</textarea></div>`;
+  const m=mark(a,it.id),open=state.ui.openC===it.id,n=phN(a,it.id);
+  return `<div class="item s${m.s} ${hasCmt(a,it.id,m)?'hc':''}" tabindex="0" data-id="${it.id}" role="button" aria-pressed="${m.s===1}">
+    <span class="st">${GL[m.s]}</span><span class="tx">${esc(name(it))}</span><span class="cb" data-c="${it.id}" title="${t('comment')}">✎${n?`<small>📷${n}</small>`:''}</span></div>
+   <div class="cmt ${open?'':'hidden'}" data-cw="${it.id}"><textarea data-cm="${it.id}" placeholder="${t('commentPh')}">${esc(m.c||'')}</textarea>${phGrid(a,it.id)}</div>`;
 }
 function optLabel(it,en){const o=(it.opts||[]).find(x=>x.en===en);return o?name(o):en;}
 function valText(it,v){if(!hasVal(v))return '';if(it.f==='kinney')return kwTextV(v);if(it.f==='multi')return v.map(x=>optLabel(it,x)).join(', ');if(it.f==='select')return optLabel(it,v);return String(v);}
@@ -1180,14 +1287,16 @@ function reportBlock(a,b,mode){
     if(it.f){const v=a.vals[it.id];if(mode==='exc'&&!hasVal(v))continue;
       if(pending.length){out+=pending.map(p=>p.h).join('');pending=[];}
       any=true;out+=`<tr class="fr"><td class="st"></td><td class="tx">${esc(name(it))}</td><td class="c">${esc(valText(it,v))||'<span class="muted">—</span>'}</td></tr>`;continue;}
-    const m=mark(a,it.id);if(mode==='exc'&&!isDev(m))continue;
+    const m=mark(a,it.id);if(mode==='exc'&&!isDev(m)&&!phN(a,it.id))continue;
     if(pending.length){out+=pending.map(p=>p.h).join('');pending=[];}
-    any=true;out+=`<tr class="s${m.s}"><td class="st">${GL[m.s]}</td><td class="tx">${esc(name(it))}</td><td class="c">${esc(m.c||'')}</td></tr>`;}
+    any=true;out+=`<tr class="s${m.s}"><td class="st">${GL[m.s]}</td><td class="tx">${esc(name(it))}</td><td class="c">${esc(m.c||'')}${rPhotos(a,it.id)}</td></tr>`;}
   return `<div class="blk"><h2>${esc(name(b.title))}</h2>${any?`<table class="rt ${mode==='full'?'dense':''}">${out}</table>`:`<div class="none">${t('noDev')}</div>`}</div>`;
 }
 function removedBlock(a,q){
   const known=new Set(qItems(q).map(i=>i.id));let out='';
-  for(const id in a.marks)if(!known.has(id)&&isDev(a.marks[id])){const m=a.marks[id];out+=`<tr class="s${m.s}"><td class="st">${GL[m.s]}</td><td class="tx"><i>${t('removedOne')}</i> ${esc(id)}</td><td class="c">${esc(m.c||'')}</td></tr>`;}
+  for(const id in a.marks)if(!known.has(id)&&isDev(a.marks[id])){const m=a.marks[id];out+=`<tr class="s${m.s}"><td class="st">${GL[m.s]}</td><td class="tx"><i>${t('removedOne')}</i> ${esc(id)}</td><td class="c">${esc(m.c||'')}${rPhotos(a,id)}</td></tr>`;}
+  const orphan=new Set(phFor(a.id).map(p=>p.tg).filter(tg=>tg!=='details'&&!known.has(tg)&&!(a.marks[tg]&&isDev(a.marks[tg]))));
+  for(const id of orphan)out+=`<tr><td class="st"></td><td class="tx"><i>${t('removedPh')}</i> ${esc(id)}</td><td class="c">${rPhotos(a,id)}</td></tr>`;
   return out?`<div class="blk"><h2>${t('removed')}</h2><table class="rt">${out}</table></div>`:'';
 }
 function rHead(a,p,q){const dev=devCount(a);return `<dl class="rhead" style="margin-top:10px">
@@ -1203,6 +1312,7 @@ function vReport(){
     <button class="primary" onclick="window.print()">${t('print')}</button></div>
    <article class="rp ${mode==='full'?'full':''}">
     <h1>${esc(q.name)} — ${esc(p.name)}</h1>${rHead(a,p,q)}
+    ${phN(a,'details')?`<div class="blk"><h2>${t('photos')}</h2>${rPhotos(a,'details','big')}</div>`:''}
     <div class="blocks">${q.blocks.map(b=>reportBlock(a,b,mode)).join('')}${removedBlock(a,q)}</div>
     <div class="blk"><h2>${t('conclusions')}</h2><div class="concl">${esc(a.conclusions||'')||'<span class="muted">—</span>'}</div></div>
     <div class="foot"><span>${t('legend')}</span><span>${t('reportedOn')} ${today()}</span></div>
@@ -1255,14 +1365,16 @@ function saveQ(id){const i=state.questionnaires.findIndex(q=>q.id===id);if(i<0)r
 function download(fname,obj){const blob=new Blob([JSON.stringify(obj,null,1)],{type:'application/json'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=fname;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}
 const slug=s=>(s||'export').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
 const stamp=()=>today().replace(/-/g,'');
-function exportAll(){download(`soat-all-${stamp()}.json`,{app:'soat-scat',v:3,exportedAt:new Date().toISOString(),questionnaires:state.questionnaires,projects:state.projects});}
-function exportProject(p){const used=new Set(p.analyses.map(a=>a.qid));download(`soat-${slug(p.name)}-${stamp()}.json`,{app:'soat-scat',v:3,exportedAt:new Date().toISOString(),questionnaires:state.questionnaires.filter(q=>used.has(q.id)),projects:[p]});}
+// export keeps app id 'soat-scat' (pre-CheckFlow name) so older and newer files stay interchangeable; photos travel as data URLs
+const aidsOf=ps=>new Set(ps.flatMap(p=>p.analyses.map(a=>a.id)));
+async function exportAll(){download(`checkflow-all-${stamp()}.json`,{app:'soat-scat',v:3,exportedAt:new Date().toISOString(),questionnaires:state.questionnaires,projects:state.projects,photos:await phExport(aidsOf(state.projects))});}
+async function exportProject(p){const used=new Set(p.analyses.map(a=>a.qid));download(`checkflow-${slug(p.name)}-${stamp()}.json`,{app:'soat-scat',v:3,exportedAt:new Date().toISOString(),questionnaires:state.questionnaires.filter(q=>used.has(q.id)),projects:[p],photos:await phExport(aidsOf([p]))});}
 function importJSON(text){
   let d;try{d=JSON.parse(text);}catch(e){toast(t('importErr'));return;}
   if(!d||d.app!=='soat-scat'||!Array.isArray(d.projects)){toast(t('importErr'));return;}
   if(d.v===1||d.v===2){ // convert an older export in place using the same migration
     const s=state;state={v:d.v,lang:s.lang,taxonomy:d.taxonomy,questionnaires:d.questionnaires||[],projects:d.projects,ui:s.ui};migrate();d={questionnaires:state.questionnaires,projects:state.projects};state=s;}
-  let n=0;
+  let n=0;const phs=d.photos,impA=new Set();
   const maps={};
   for(const q0 of d.questionnaires||[]){const i=state.questionnaires.findIndex(x=>x.id===q0.id);
     if(i<0){const r=remapQ(q0);maps[q0.id]=r.map;state.questionnaires.push(r.q);pQ(r.q);continue;}
@@ -1273,8 +1385,9 @@ function importJSON(text){
   for(const p of d.projects){if(!p.id||!p.analyses)continue;
     const i=state.projects.findIndex(x=>x.id===p.id);
     if(i>=0){if(!confirm(t('replaceProject',{n:p.name})))continue;for(const a of state.projects[i].analyses)if(!p.analyses.some(x=>x.id===a.id))dA(a);state.projects[i]=p;}else state.projects.push(p);n++;
-    p.analyses.forEach(a=>{a.vals=a.vals||{};a.pid=p.id;});pP(p);for(const a of p.analyses)pA(a,p.id,true);}
+    p.analyses.forEach(a=>{a.vals=a.vals||{};a.pid=p.id;impA.add(a.id);});pP(p);for(const a of p.analyses)pA(a,p.id,true);}
   save();toast(t('imported',{p:n}));render();
+  if(phs&&phs.length&&impA.size)phImport(phs,impA).then(render);
 }
 
 /* ---------- mutations ---------- */
@@ -1282,7 +1395,7 @@ function touch(){const p=proj();if(p)p.updated=new Date().toISOString();const a=
 function newAnalysis(p,qid){const a={id:uid(),pid:p.id,qid,date:today(),site:p.site||'',analyst:'',status:'draft',conclusions:'',marks:{},vals:{}};p.analyses.push(a);const lq=p.lastQ!==qid;p.lastQ=qid;touch();pA(a,p.id,true);if(lq)pP(p);return a;}
 function setMark(id,patch){const a=ana();const m={...mark(a,id),...patch};if(m.s===0&&!(m.c&&m.c.trim()))delete a.marks[id];else a.marks[id]=m;touch();pA(a);}
 function updateRow(id){const a=ana();const m=mark(a,id);const el=document.querySelector(`.item[data-id="${id}"]`);if(!el)return;
-  el.className=`item s${m.s} ${m.c&&m.c.trim()?'hc':''}`;el.querySelector('.st').textContent=GL[m.s];el.setAttribute('aria-pressed',m.s===1);
+  el.className=`item s${m.s} ${hasCmt(a,id,m)?'hc':''}`;el.querySelector('.st').textContent=GL[m.s];el.setAttribute('aria-pressed',m.s===1);
   const q=qOf(a),b=q.blocks[+state.ui.step.slice(1)];if(!b)return;const c=blockCounts(a,b);
   const rb=document.querySelector(`.rail [data-step="${state.ui.step}"] .cnt`);if(rb)rb.innerHTML=cntHtml(c);
   const bh=document.getElementById('bcount');if(bh)bh.textContent=`${c.m} ${t('marked')} / ${c.tot}`;}
@@ -1293,8 +1406,12 @@ function setStep(s){state.ui.step=s;state.ui.openC=null;save();render();}
 /* ---------- events ---------- */
 const app=document.getElementById('app');
 document.body.addEventListener('click',e=>{
-  const b=e.target.closest('[data-go],[data-lang],[data-step],[data-rep],[data-open-p],[data-del-p],[data-open-a],[data-rep-a],[data-dup-a],[data-del-a],[data-export-p],[data-export-all],[data-qsave],[data-qdel],[data-qrestore],[data-sync],[data-wipe],#newAna,#importBtn,#addQ,.item,.cb');
+  const b=e.target.closest('[data-go],[data-lang],[data-step],[data-rep],[data-open-p],[data-del-p],[data-open-a],[data-rep-a],[data-dup-a],[data-del-a],[data-export-p],[data-export-all],[data-qsave],[data-qdel],[data-qrestore],[data-sync],[data-wipe],[data-ph-add],[data-ph-edit],[data-ph-del],[data-ph-view],#newAna,#importBtn,#addQ,.item,.cb');
   if(!b)return;const d=b.dataset;
+  if(d.phAdd!==undefined){phPick(d.phAdd,!!d.cam);return;}
+  if(d.phEdit){phEdit(d.phEdit);return;}
+  if(d.phView){phView(d.phView);return;}
+  if(d.phDel){const p=phById(d.phDel);if(p&&confirm(t('delPhoto'))){phDel(p).then(()=>{touch();render();});}return;}
   if(b.classList.contains('cb')){e.stopPropagation();toggleComment(d.c);return;}
   if(b.classList.contains('item')){cycle(d.id);b.focus();return;}
   if(d.sync!==undefined){SYNC.openPanel();return;}
@@ -1306,7 +1423,7 @@ document.body.addEventListener('click',e=>{
   if(d.delP){if(confirm(t('confirmDel'))){const p=state.projects.find(x=>x.id===d.delP);state.projects=state.projects.filter(x=>x.id!==d.delP);if(p)dP(p);else save();render();}return;}
   if(d.openA){go('analysis',{aid:d.openA,step:'details'});return;}
   if(d.repA){go('report',{aid:d.repA});return;}
-  if(d.dupA){const p=proj();const src=p.analyses.find(a=>a.id===d.dupA);const c=JSON.parse(JSON.stringify(src));c.id=uid();c.date=today();c.status='draft';c.vals=c.vals||{};c.pid=p.id;p.analyses.push(c);touch();pA(c,p.id,true);render();return;}
+  if(d.dupA){const p=proj();const src=p.analyses.find(a=>a.id===d.dupA);const c=JSON.parse(JSON.stringify(src));c.id=uid();c.date=today();c.status='draft';c.vals=c.vals||{};c.pid=p.id;p.analyses.push(c);touch();pA(c,p.id,true);if(PHOK)for(const ph of phFor(src.id))phPut({...ph,id:uid(),aid:c.id});render();return;}
   if(d.delA){if(confirm(t('confirmDel'))){const p=proj();const a=p.analyses.find(x=>x.id===d.delA);p.analyses=p.analyses.filter(x=>x.id!==d.delA);touch();if(a)dA(a);else save();render();}return;}
   if(d.exportP){exportProject(state.projects.find(p=>p.id===d.exportP));return;}
   if(d.exportAll!==undefined){exportAll();return;}
@@ -1323,6 +1440,7 @@ function setField(el){const a=ana();if(!a)return;a[el.dataset.f]=el.value;touch(
 function setVal(id,v){const a=ana();if(!a)return;if(hasVal(v))a.vals[id]=v;else delete a.vals[id];touch();pA(a);
   const b=qOf(a).blocks[+state.ui.step.slice(1)];if(!b)return;const c=blockCounts(a,b);const rb=document.querySelector(`.rail [data-step="${state.ui.step}"] .cnt`);if(rb)rb.innerHTML=cntHtml(c);const bh=document.getElementById('bcount');if(bh)bh.textContent=`${c.m} ${t('marked')} / ${c.tot}`;}
 function fieldEvent(e){const el=e.target,d=el.dataset;const a=ana();if(!a)return false;
+  if(d.phCap!==undefined){if(e.type==='change'){const p=phById(d.phCap);if(p&&(p.caption||'')!==el.value)phPut({...p,caption:el.value});}return true;}
   if(d.f){setField(el);return true;}
   if(d.fv){setVal(d.fv,el.type==='number'?(el.value===''?'':+el.value):el.value);return true;}
   if(d.fmv){const cur=[...document.querySelectorAll(`[data-fmv="${d.fmv}"]:checked`)].map(x=>x.value);setVal(d.fmv,cur);return true;}
@@ -1330,6 +1448,8 @@ function fieldEvent(e){const el=e.target,d=el.dataset;const a=ana();if(!a)return
   return false;}
 app.addEventListener('input',e=>{if(fieldEvent(e))return;const el=e.target;if(el.dataset.cm){setMark(el.dataset.cm,{c:el.value});updateRow(el.dataset.cm);}});
 app.addEventListener('change',fieldEvent);
+document.getElementById('phCam').addEventListener('change',phFiles);
+document.getElementById('phGal').addEventListener('change',phFiles);
 document.getElementById('importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(importJSON);e.target.value='';});
 app.addEventListener('keydown',e=>{
   const el=e.target;
@@ -1345,6 +1465,7 @@ app.addEventListener('keydown',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey)return;if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+  if(lb||(window.SfhaPhotoEditor&&SfhaPhotoEditor.isOpen()))return;
   if(state.ui.view!=='analysis')return;const a=ana();if(!a)return;
   const order=stepOrder(qOf(a));const i=order.indexOf(state.ui.step);
   if((e.key==='ArrowRight'||e.key===']')&&i<order.length-1)setStep(order[i+1]);

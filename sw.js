@@ -1,7 +1,7 @@
-/* SOATWeb service worker — offline shell for this tool (scope: this repo's folder).
+/* CheckFlow (repo SOATWeb) service worker — offline shell for this tool (scope: this repo's folder).
    Same template in every SFHA tool repo; see ToolDeck/OFFLINE.md.
 
-   - Same-origin GETs (this page, ToolDeck's shared sync.v1.js): network-first, so a fresh
+   - Same-origin GETs (this page, ToolDeck's shared sync.v1.js and photo-editor.v1.js): network-first, so a fresh
      version always wins when online; after 4 s without an answer (bad Wi-Fi) or offline, the
      cached copy is served. The page and sync layer are pre-cached on install.
    - CDN scripts/styles/fonts/workers (versioned URLs): cache-first.
@@ -10,8 +10,8 @@
    Cache Storage is shared by every tool on weirders.github.io, so this worker only ever
    touches caches whose name starts with its own PREFIX. */
 const PREFIX = 'soat-shell-';
-const CACHE = PREFIX + 'v1';
-const PRECACHE = ['./', 'https://weirders.github.io/ToolDeck/sync.v1.js'];
+const CACHE = PREFIX + 'v2';  // prefix kept from the SOATWeb name so old caches are cleaned up
+const PRECACHE = ['./', 'https://weirders.github.io/ToolDeck/sync.v1.js', 'https://weirders.github.io/ToolDeck/photo-editor.v1.js'];
 const NET_TIMEOUT = 4000;
 const CDN = /^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 const CDN_TYPES = new Set(['script', 'style', 'font', 'worker', 'sharedworker']);
